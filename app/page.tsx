@@ -57,6 +57,18 @@ export default function Home() {
         if (articlesData.success) {
           setArticles(articlesData.articles);
 
+          // Auto-categorize articles without categories
+          const needsCategorization = articlesData.articles.filter((a: any) =>
+            !a.categoriesJson &&
+            (!a.categorizationStatus || a.categorizationStatus === 'pending' || a.categorizationStatus === 'failed')
+          );
+
+          console.log('[Home] Articles needing categorization:', needsCategorization.length);
+
+          if (needsCategorization.length > 0) {
+            categorizeMissingArticles(needsCategorization);
+          }
+
           // Auto-generate images for articles without them
           const needsImages = articlesData.articles.filter((a: any) =>
             !a.generatedImageUrl &&
@@ -87,6 +99,40 @@ export default function Home() {
 
     fetchData();
   }, []);
+
+  const categorizeMissingArticles = async (articlesToCategorize: any[]) => {
+    console.log('[Home] Auto-categorizing articles:', articlesToCategorize.length);
+
+    // Categorize in background (don't block UI)
+    for (const article of articlesToCategorize) {
+      try {
+        await fetch('/api/categorization/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleId: article.id })
+        });
+        console.log(`[Home] Categorized article ${article.id}`);
+      } catch (error) {
+        console.error(`[Home] Failed to categorize article ${article.id}:`, error);
+      }
+    }
+
+    // Refresh articles and categories after categorization
+    setTimeout(async () => {
+      const articlesRes = await fetch('/api/library');
+      const filtersRes = await fetch('/api/library/filters');
+      const articlesData = await articlesRes.json();
+      const filtersData = await filtersRes.json();
+
+      if (articlesData.success) {
+        setArticles(articlesData.articles);
+      }
+      if (filtersData.success) {
+        setCategories(filtersData.categories.map((c: any) => c.name));
+      }
+      console.log('[Home] Refreshed after categorization');
+    }, 3000); // Wait 3 seconds for categorization to complete
+  };
 
   const generateMissingImages = async (regenerate: boolean = false) => {
     if (generatingImages) return;
@@ -156,30 +202,23 @@ export default function Home() {
   // Empty state: Show welcome screen
   if (articles.length === 0) {
     return (
-      <div className="min-h-screen bg-black relative overflow-hidden">
-        {/* Ambient background glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,255,136,0.15),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,212,255,0.12),transparent_50%)]" />
-
+      <div className="min-h-screen bg-secondary relative overflow-hidden">
         <div className="relative flex flex-col items-center justify-center min-h-screen p-8">
           <div className="max-w-2xl text-center space-y-6">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+            <h1 className="netflix-h1 mb-4">
               Welcome to{' '}
-              <span className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent">
+              <span className="text-netflix-red">
                 TTS Article Reader
               </span>
             </h1>
-            <p className="text-lg text-white/60 mb-8">
+            <p className="netflix-body text-xl mb-8">
               Transform web articles into natural-sounding audio with AI voices.
               Start by adding your first article.
             </p>
             <Link href="/create">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold text-lg hover:shadow-lg hover:shadow-[#00ff88]/50 transition-all"
-              >
+              <button className="netflix-button netflix-button-primary text-lg px-8 py-4">
                 Add Your First Article
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
@@ -198,31 +237,29 @@ export default function Home() {
   const articlesWithAudio = articles.filter(a => a.audioFiles && a.audioFiles.length > 0);
 
   return (
-    <div className="min-h-screen bg-black pb-12">
+    <div className="min-h-screen bg-primary pb-12">
       {/* Floating Action Buttons */}
       <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
         {/* Add Article Button */}
         <Link href="/create">
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold shadow-2xl shadow-[#00ff88]/50 hover:shadow-[#00ff88]/70 transition-all rounded-full w-14 h-14 p-0"
+          <button
+            className="bg-[#e50914] hover:bg-[#ff1e25] text-white font-semibold shadow-2xl transition-all rounded-full w-14 h-14 flex items-center justify-center"
             title="Add new article"
           >
             <Plus className="w-6 h-6" />
-          </Button>
+          </button>
         </Link>
 
         {/* Generate Images Button */}
         {articles.length > 0 && (
-          <Button
-            size="lg"
+          <button
             onClick={() => generateMissingImages(true)} // Regenerate ALL when clicked manually
             disabled={generatingImages}
-            className="bg-[#a855f7] hover:bg-[#a855f7]/90 text-white font-semibold shadow-2xl shadow-[#a855f7]/50 hover:shadow-[#a855f7]/70 transition-all rounded-full w-14 h-14 p-0 disabled:opacity-50"
+            className="bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white font-semibold shadow-2xl transition-all rounded-full w-14 h-14 flex items-center justify-center disabled:opacity-50"
             title="Regenerate all AI images"
           >
             <Sparkles className={`w-6 h-6 ${generatingImages ? 'animate-spin' : ''}`} />
-          </Button>
+          </button>
         )}
       </div>
 

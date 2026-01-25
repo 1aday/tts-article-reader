@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Navigation } from "@/components/navigation";
+import { PlayerProvider } from "@/contexts/PlayerContext";
+import { PersistentPlayer } from "@/components/PersistentPlayer";
 
 export const metadata: Metadata = {
   title: "TTS Reader - Transform Articles into Audio",
@@ -20,10 +22,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="antialiased">
-        <Navigation />
-        {children}
-        <Toaster />
+      <body className="antialiased pb-24">
+        <PlayerProvider>
+          <Navigation />
+          {children}
+          <PersistentPlayer />
+          <Toaster />
+        </PlayerProvider>
       </body>
     </html>
   );

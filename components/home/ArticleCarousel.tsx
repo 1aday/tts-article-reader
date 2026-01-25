@@ -12,14 +12,14 @@ export function ArticleCarousel({ title, articles }: ArticleCarouselProps) {
   if (articles.length === 0) return null;
 
   return (
-    <div className="space-y-4 mb-8">
+    <div className="netflix-row">
       {/* Section Title */}
-      <h2 className="text-xl md:text-2xl font-bold text-white px-4 md:px-8">
+      <h2 className="netflix-row-title">
         {title}
       </h2>
 
-      {/* Scrollable Card Container */}
-      <div className="carousel-container px-4 md:px-8">
+      {/* Netflix Carousel */}
+      <div className="netflix-carousel">
         {articles.map((article) => (
           <ArticleCard key={article.id} article={article} />
         ))}

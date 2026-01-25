@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
 import { Play, Info, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 interface FeaturedArticleHeroProps {
   article: Article & {
@@ -10,87 +10,72 @@ interface FeaturedArticleHeroProps {
 }
 
 export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
+  const { play } = usePlayer();
   const displayImage = article.generatedImageUrl || article.imageUrl;
   const summary = article.originalText
     ? article.originalText.slice(0, 200) + "..."
     : "Click to read and listen to this article.";
   const hasAudio = article.audioFiles && article.audioFiles.length > 0;
-  const firstAudioId = article.audioFiles?.[0]?.id;
+
+  const handlePlay = () => {
+    if (hasAudio) {
+      const audioFile = article.audioFiles![0];
+      if (!audioFile.blobUrl) return; // Skip if no URL
+      play({
+        id: audioFile.id,
+        articleId: article.id,
+        articleTitle: article.title,
+        voiceName: audioFile.voiceName,
+        blobUrl: audioFile.blobUrl,
+        duration: audioFile.duration || 0,
+      });
+    }
+  };
 
   return (
-    <div className="relative h-[60vh] min-h-[400px] overflow-hidden bg-gradient-to-br from-[#00ff88]/10 to-[#00d4ff]/10">
+    <div className="netflix-hero" style={{ backgroundImage: displayImage ? `url(${displayImage})` : 'none' }}>
       {/* Background Image or Gradient */}
-      <div className="absolute inset-0">
-        {displayImage ? (
-          <>
-            <img
-              src={displayImage}
-              alt={article.title}
-              className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
-            />
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-          </>
-        ) : (
-          <>
-            {/* Gradient Background with Icon */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20" />
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              <FileText className="w-48 h-48 text-[#00ff88]" />
-            </div>
-            {/* Gradient Overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
-          </>
-        )}
-      </div>
-
-      {/* Content Overlay */}
-      <div className="relative z-10 h-full flex items-end p-6 md:p-12">
-        <div className="max-w-3xl">
-          {/* Title */}
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 text-white drop-shadow-lg">
-            {article.title}
-          </h1>
-
-          {/* Summary */}
-          <p className="text-base md:text-lg text-white/90 mb-6 line-clamp-3 drop-shadow-md">
-            {summary}
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-3 md:gap-4">
-            {hasAudio ? (
-              <Link href={`/player/${firstAudioId}`}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold hover:shadow-lg hover:shadow-[#00ff88]/50 transition-all"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Play Now
-                </Button>
-              </Link>
-            ) : (
-              <Link href={`/voice-select/${article.id}`}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold hover:shadow-lg hover:shadow-[#00ff88]/50 transition-all"
-                >
-                  Generate Audio
-                </Button>
-              </Link>
-            )}
-
-            <Link href="/library">
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 backdrop-blur-sm"
-              >
-                <Info className="w-5 h-5 mr-2" />
-                Browse Library
-              </Button>
-            </Link>
+      {!displayImage && (
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900">
+          <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <FileText className="w-48 h-48 text-white" />
           </div>
+        </div>
+      )}
+
+      {/* Netflix gradient overlay */}
+      <div className="netflix-hero-content">
+        {/* Title */}
+        <h1 className="netflix-hero-title">
+          {article.title}
+        </h1>
+
+        {/* Summary */}
+        <p className="netflix-hero-description line-clamp-3">
+          {summary}
+        </p>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-wrap gap-3">
+          {hasAudio ? (
+            <button onClick={handlePlay} className="netflix-button netflix-button-primary">
+              <Play className="w-5 h-5" fill="white" />
+              Play Now
+            </button>
+          ) : (
+            <Link href={`/voice-select/${article.id}`}>
+              <button className="netflix-button netflix-button-primary">
+                Generate Audio
+              </button>
+            </Link>
+          )}
+
+          <Link href="/library">
+            <button className="netflix-button netflix-button-secondary">
+              <Info className="w-5 h-5" />
+              More Info
+            </button>
+          </Link>
         </div>
       </div>
     </div>

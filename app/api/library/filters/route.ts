@@ -1,43 +1,65 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { categories, tags, articleCategories, articleTags } from "@/lib/db/schema";
-import { sql, desc } from "drizzle-orm";
+import { articles } from "@/lib/db/schema";
 
 /**
  * GET /api/library/filters
  * Get all categories and tags with article counts for filtering
+ * Extracts from cached JSON fields for performance
  */
 export async function GET() {
   try {
-    // Get categories with article counts
-    const categoriesWithCounts = await db
-      .select({
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-        articleCount: sql<number>`count(${articleCategories.articleId})`,
-      })
-      .from(categories)
-      .leftJoin(articleCategories, sql`${categories.id} = ${articleCategories.categoryId}`)
-      .groupBy(categories.id)
-      .orderBy(desc(sql`count(${articleCategories.articleId})`));
+    // Get all articles
+    const allArticles = await db.select().from(articles);
 
-    // Get tags with article counts
-    const tagsWithCounts = await db
-      .select({
-        id: tags.id,
-        name: tags.name,
-        slug: tags.slug,
-        articleCount: sql<number>`count(${articleTags.articleId})`,
-      })
-      .from(tags)
-      .leftJoin(articleTags, sql`${tags.id} = ${articleTags.tagId}`)
-      .groupBy(tags.id)
-      .orderBy(desc(sql`count(${articleTags.articleId})`));
+    // Count categories and tags from JSON cache
+    const categoryCount = new Map<string, number>();
+    const tagCount = new Map<string, number>();
 
-    // Filter out categories/tags with 0 articles
-    const activeCategories = categoriesWithCounts.filter(c => c.articleCount > 0);
-    const activeTags = tagsWithCounts.filter(t => t.articleCount > 0);
+    for (const article of allArticles) {
+      // Parse categories
+      if (article.categoriesJson) {
+        try {
+          const cats = JSON.parse(article.categoriesJson) as string[];
+          cats.forEach(cat => {
+            categoryCount.set(cat, (categoryCount.get(cat) || 0) + 1);
+          });
+        } catch (e) {
+          console.error('Failed to parse categories for article', article.id, e);
+        }
+      }
+
+      // Parse tags
+      if (article.tagsJson) {
+        try {
+          const articleTags = JSON.parse(article.tagsJson) as string[];
+          articleTags.forEach(tag => {
+            tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+          });
+        } catch (e) {
+          console.error('Failed to parse tags for article', article.id, e);
+        }
+      }
+    }
+
+    // Convert to array and sort by count (descending)
+    const activeCategories = Array.from(categoryCount.entries())
+      .map(([name, count], index) => ({
+        id: index + 1,
+        name,
+        slug: name.toLowerCase().replace(/\s+/g, '-'),
+        articleCount: count
+      }))
+      .sort((a, b) => b.articleCount - a.articleCount);
+
+    const activeTags = Array.from(tagCount.entries())
+      .map(([name, count], index) => ({
+        id: index + 1,
+        name,
+        slug: name.toLowerCase().replace(/\s+/g, '-'),
+        articleCount: count
+      }))
+      .sort((a, b) => b.articleCount - a.articleCount);
 
     return NextResponse.json({
       success: true,

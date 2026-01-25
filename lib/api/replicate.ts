@@ -25,7 +25,8 @@ interface ReplicatePrediction {
 }
 
 /**
- * Generate an image using Replicate's Nano Banana (FLUX Realism) model
+ * Generate an image using Google's Nano Banana Pro (Gemini 3 Pro Image) on Replicate
+ * Leverages reasoning-based generation for content-expressive, magazine-quality article covers
  * Downloads the generated image and uploads to Vercel Blob for persistence
  * Returns the Vercel Blob URL
  */
@@ -58,11 +59,13 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
       "Prefer": "wait" // Wait for result instead of immediate return
     },
     body: JSON.stringify({
-      version: "black-forest-labs/flux-1.1-pro",
+      version: "google/nano-banana-pro",
       input: {
         prompt,
         aspect_ratio: aspectRatio,
+        resolution: resolution,
         output_format: outputFormat,
+        safety_filter_level: safetyFilterLevel,
         image_input: [] // No input images for article covers
       }
     })

@@ -452,12 +452,12 @@ export default function LibraryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.12),transparent_50%)] animate-pulse" />
+      <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.15),transparent_70%)] animate-pulse" />
         <div className="relative">
           <div className="flex flex-col items-center gap-6 text-center">
-            <div className="w-16 h-16 border-4 border-[#00ff88]/20 border-t-[#00ff88] rounded-full animate-spin" />
-            <div className="text-2xl font-semibold gradient-terminal">
+            <div className="w-16 h-16 border-4 border-[#e50914]/30 border-t-[#e50914] rounded-full animate-spin" />
+            <div className="text-2xl font-semibold text-white">
               Loading library...
             </div>
           </div>
@@ -467,27 +467,27 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden pt-16">
-      {/* Enhanced Background gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,255,136,0.12),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(0,212,255,0.08),transparent_50%)]" />
+    <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
+      {/* Netflix Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
       <div className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 ${nowPlaying ? 'pb-40 sm:pb-32' : ''}`}>
-        {/* Enhanced Header */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-12 sm:mb-16 md:mb-20 animate-fadeInDown">
           <div className="space-y-2 sm:space-y-3">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold gradient-terminal tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight">
               Library
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-white/70 leading-relaxed">
-              Your saved articles and audio files • <span className="text-[#00ff88] font-semibold">{articles.length}</span> {articles.length === 1 ? "article" : "articles"}
+            <p className="text-base sm:text-lg md:text-xl text-[#d2d2d2] leading-relaxed">
+              Your saved articles and audio files • <span className="text-[#e50914] font-semibold">{articles.length}</span> {articles.length === 1 ? "article" : "articles"}
             </p>
           </div>
           <div className="flex gap-2 sm:gap-3">
             <Button
               onClick={() => router.push("/create")}
               size="lg"
-              className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-semibold shadow-lg"
+              className="netflix-button netflix-button-primary font-semibold shadow-lg"
             >
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">New Article</span>
@@ -498,7 +498,7 @@ export default function LibraryPage() {
                 onClick={handleBulkRefreshImages}
                 disabled={bulkRefreshing}
                 size="lg"
-                className="bg-[#00d4ff]/10 text-[#00d4ff] hover:bg-[#00d4ff]/20 border border-[#00d4ff]/30 font-semibold shadow-lg disabled:opacity-50"
+                className="netflix-button netflix-button-secondary font-semibold shadow-lg disabled:opacity-50"
                 title="Fetch images for all articles with URLs"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${bulkRefreshing ? "animate-spin" : ""}`} />
@@ -510,7 +510,7 @@ export default function LibraryPage() {
               onClick={handleBulkGenerateImages}
               disabled={bulkGenerating}
               size="lg"
-              className="bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 border border-[#a855f7]/30 font-semibold shadow-lg disabled:opacity-50"
+              className="netflix-button netflix-button-secondary font-semibold shadow-lg disabled:opacity-50"
               title="Generate AI images for all articles"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${bulkGenerating ? "animate-spin" : ""}`} />
@@ -540,25 +540,25 @@ export default function LibraryPage() {
         )}
 
         {articles.length === 0 ? (
-          <div className="bg-surface-1 backdrop-blur-md border-2 border-white/10 rounded-3xl p-12 sm:p-16 md:p-20 shadow-2xl animate-fadeInUp">
+          <div className="bg-[#2f2f2f] backdrop-blur-md border border-[#404040] rounded-3xl p-12 sm:p-16 md:p-20 shadow-2xl animate-fadeInUp">
             <div className="text-center space-y-8 sm:space-y-10">
-              <div className="flex justify-center animate-float">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-surface-2 border-2 border-[#00ff88]/20 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,136,0.2)]">
-                  <FileText className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-[#00ff88]/60" />
+              <div className="flex justify-center">
+                <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-[#181818] border-2 border-[#e50914]/30 flex items-center justify-center">
+                  <FileText className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-[#808080]" />
                 </div>
               </div>
               <div className="space-y-3 sm:space-y-4">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold gradient-terminal">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
                   No articles yet
                 </h2>
-                <p className="text-lg sm:text-xl text-white/60 max-w-md mx-auto px-4 leading-relaxed">
+                <p className="text-lg sm:text-xl text-[#d2d2d2] max-w-md mx-auto px-4 leading-relaxed">
                   Create your first article to start building your audio library
                 </p>
               </div>
               <Button
                 size="xl"
                 onClick={() => router.push("/create")}
-                className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-bold shadow-2xl shadow-[#00ff88]/30 animate-glow"
+                className="netflix-button netflix-button-primary font-bold shadow-2xl"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Create Your First Article
@@ -566,25 +566,25 @@ export default function LibraryPage() {
             </div>
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="bg-surface-1 backdrop-blur-md border-2 border-white/10 rounded-3xl p-12 sm:p-16 md:p-20 shadow-2xl animate-fadeInUp">
+          <div className="bg-[#2f2f2f] backdrop-blur-md border border-[#404040] rounded-3xl p-12 sm:p-16 md:p-20 shadow-2xl animate-fadeInUp">
             <div className="text-center space-y-8 sm:space-y-10">
-              <div className="flex justify-center animate-float">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-surface-2 border-2 border-[#00ff88]/20 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,136,0.2)]">
-                  <FileText className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-[#00ff88]/60" />
+              <div className="flex justify-center">
+                <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-[#181818] border-2 border-[#e50914]/30 flex items-center justify-center">
+                  <FileText className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-[#808080]" />
                 </div>
               </div>
               <div className="space-y-3 sm:space-y-4">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold gradient-terminal">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
                   No matching articles
                 </h2>
-                <p className="text-lg sm:text-xl text-white/60 max-w-md mx-auto px-4 leading-relaxed">
+                <p className="text-lg sm:text-xl text-[#d2d2d2] max-w-md mx-auto px-4 leading-relaxed">
                   Try adjusting your filters to see more results
                 </p>
               </div>
               <Button
                 size="xl"
                 onClick={handleClearFilters}
-                className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-bold shadow-2xl shadow-[#00ff88]/30"
+                className="netflix-button netflix-button-primary font-bold shadow-2xl"
               >
                 Clear All Filters
               </Button>
