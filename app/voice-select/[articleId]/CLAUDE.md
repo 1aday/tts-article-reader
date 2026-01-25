@@ -8,4 +8,14 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #2309 | 9:24 PM | ✅ | Voice Select Continue Button Made Responsive for Mobile | ~486 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #2673 | 12:15 AM | 🔴 | Fixed Sticky Footer Overlap with Voice Grid Bottom Spacing | ~439 |
+| #2671 | " | 🟣 | Sticky Bottom Action Bar with Selected Voice Preview | ~610 |
+| #2670 | 12:14 AM | 🟣 | Voice Card UI Enhanced with Rich Metadata Badges and Visual Polish | ~611 |
+| #2666 | 12:13 AM | 🟣 | Enhanced Voice Filtering with Tab Categories and Additional Filters | ~527 |
+| #2665 | " | 🟣 | Age and Use Case Filter Extraction Added to Voice Selection | ~472 |
 </claude-mem-context>

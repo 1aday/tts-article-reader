@@ -377,7 +377,7 @@ export default function VoiceSelectPage() {
                       }}
                       className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                         selectedCategory === cat
-                          ? "border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88]"
+                          ? "border-[#e50914] bg-[#e50914]/10 text-[#e50914]"
                           : "border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80"
                       }`}
                     >
@@ -402,7 +402,7 @@ export default function VoiceSelectPage() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                           selectedGender === gender
-                            ? "border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88]"
+                            ? "border-[#e50914] bg-[#e50914]/10 text-[#e50914]"
                             : "border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80"
                         }`}
                       >
@@ -428,7 +428,7 @@ export default function VoiceSelectPage() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                           selectedAccent === accent
-                            ? "border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88]"
+                            ? "border-[#e50914] bg-[#e50914]/10 text-[#e50914]"
                             : "border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80"
                         }`}
                       >
@@ -454,7 +454,7 @@ export default function VoiceSelectPage() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                           selectedAge === age
-                            ? "border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88]"
+                            ? "border-[#e50914] bg-[#e50914]/10 text-[#e50914]"
                             : "border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80"
                         }`}
                       >
@@ -480,7 +480,7 @@ export default function VoiceSelectPage() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                           selectedUseCase === useCase
-                            ? "border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88]"
+                            ? "border-[#e50914] bg-[#e50914]/10 text-[#e50914]"
                             : "border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white/80"
                         }`}
                       >
@@ -497,7 +497,7 @@ export default function VoiceSelectPage() {
           {showSettings && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6 space-y-6">
               <div className="flex items-center gap-2 text-white">
-                <SettingsIcon className="w-5 h-5 text-[#00d4ff]" />
+                <SettingsIcon className="w-5 h-5 text-[#e50914]" />
                 <span className="font-semibold">Audio Generation Settings</span>
               </div>
 
@@ -507,7 +507,7 @@ export default function VoiceSelectPage() {
                   <label className="text-sm text-white/70">
                     Stability
                   </label>
-                  <span className="text-sm font-mono text-[#00d4ff]">{audioSettings.stability.toFixed(2)}</span>
+                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.stability.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -516,7 +516,7 @@ export default function VoiceSelectPage() {
                   step="0.05"
                   value={audioSettings.stability}
                   onChange={(e) => setAudioSettings({...audioSettings, stability: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#00d4ff] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
                 />
                 <p className="text-xs text-white/50">Higher = more stable, lower = more variable</p>
               </div>
@@ -527,7 +527,7 @@ export default function VoiceSelectPage() {
                   <label className="text-sm text-white/70">
                     Similarity Boost
                   </label>
-                  <span className="text-sm font-mono text-[#00d4ff]">{audioSettings.similarityBoost.toFixed(2)}</span>
+                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.similarityBoost.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -536,7 +536,7 @@ export default function VoiceSelectPage() {
                   step="0.05"
                   value={audioSettings.similarityBoost}
                   onChange={(e) => setAudioSettings({...audioSettings, similarityBoost: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#00d4ff] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
                 />
                 <p className="text-xs text-white/50">Enhance similarity to original voice</p>
               </div>
@@ -547,7 +547,7 @@ export default function VoiceSelectPage() {
                   <label className="text-sm text-white/70">
                     Style Exaggeration
                   </label>
-                  <span className="text-sm font-mono text-[#00d4ff]">{audioSettings.style.toFixed(2)}</span>
+                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.style.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -556,7 +556,7 @@ export default function VoiceSelectPage() {
                   step="0.05"
                   value={audioSettings.style}
                   onChange={(e) => setAudioSettings({...audioSettings, style: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#00d4ff] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
                 />
                 <p className="text-xs text-white/50">Higher = more expressive/exaggerated</p>
               </div>
@@ -570,7 +570,7 @@ export default function VoiceSelectPage() {
                 <button
                   onClick={() => setAudioSettings({...audioSettings, useSpeakerBoost: !audioSettings.useSpeakerBoost})}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
-                    audioSettings.useSpeakerBoost ? "bg-[#00d4ff]" : "bg-white/20"
+                    audioSettings.useSpeakerBoost ? "bg-[#e50914]" : "bg-white/20"
                   }`}
                 >
                   <div
@@ -594,7 +594,7 @@ export default function VoiceSelectPage() {
             <p className="text-sm text-white/30 mb-4">Try adjusting your filters or search terms</p>
             <button
               onClick={clearFilters}
-              className="text-[#00ff88] hover:underline text-sm font-medium"
+              className="text-[#e50914] hover:underline text-sm font-medium"
             >
               Clear all filters
             </button>
@@ -617,20 +617,20 @@ export default function VoiceSelectPage() {
                 >
                   {/* Glow effect for selected */}
                   {selectedVoice === voice.id && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20 rounded-2xl blur-2xl" />
+                    <div className="absolute inset-0 bg-[#e50914]/30 rounded-2xl blur-2xl" />
                   )}
 
                   <div
                     className={`relative overflow-hidden bg-gradient-to-br from-white/[0.07] to-white/[0.03] backdrop-blur-sm border rounded-2xl transition-all duration-300 ${
                       selectedVoice === voice.id
-                        ? "border-[#00ff88] shadow-xl shadow-[#00ff88]/20"
+                        ? "border-[#e50914] shadow-xl shadow-[#e50914]/20"
                         : "border-white/10 hover:border-white/20 hover:shadow-lg"
                     }`}
                   >
                     {/* Accent stripe */}
                     <div className={`h-1 w-full ${
                       selectedVoice === voice.id
-                        ? "bg-gradient-to-r from-[#00ff88] via-[#00d4ff] to-[#00ff88]"
+                        ? "bg-[#e50914]"
                         : "bg-gradient-to-r from-white/10 to-white/5"
                     }`} />
 
@@ -648,8 +648,8 @@ export default function VoiceSelectPage() {
                           )}
                         </div>
                         {selectedVoice === voice.id && (
-                          <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] rounded-full flex items-center justify-center ml-2">
-                            <svg className="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="flex-shrink-0 w-6 h-6 bg-[#e50914] rounded-full flex items-center justify-center ml-2">
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
@@ -693,7 +693,7 @@ export default function VoiceSelectPage() {
                           variant="outline"
                           className={`w-full border-2 transition-all rounded-xl h-10 font-medium text-sm ${
                             playingPreview === voice.id
-                              ? "border-[#00d4ff] text-[#00d4ff] bg-[#00d4ff]/10 shadow-lg shadow-[#00d4ff]/20"
+                              ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10 shadow-lg shadow-[#e50914]/20"
                               : "border-white/20 text-white/70 hover:border-white/30 hover:text-white hover:bg-white/5"
                           }`}
                           onClick={(e) => {
@@ -708,8 +708,8 @@ export default function VoiceSelectPage() {
                                 Playing
                                 <span className="absolute -right-5 top-0">
                                   <span className="flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d4ff] opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d4ff]"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#e50914] opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#e50914]"></span>
                                   </span>
                                 </span>
                               </span>

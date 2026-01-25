@@ -595,7 +595,7 @@ export default function LibraryPage() {
             {/* Filtered count */}
             {(activeCategories.length > 0 || activeTags.length > 0) && (
               <div className="text-sm text-white/60">
-                Showing <span className="text-[#00ff88] font-semibold">{filteredArticles.length}</span> of {articles.length} articles
+                Showing <span className="text-[#e50914] font-semibold">{filteredArticles.length}</span> of {articles.length} articles
               </div>
             )}
 
@@ -604,7 +604,7 @@ export default function LibraryPage() {
               {filteredArticles.map((article, index) => (
                 <div
                   key={article.id}
-                  className={`group relative overflow-hidden rounded-2xl bg-surface-1 border-2 border-white/10 hover:border-[#00ff88]/40 hover:shadow-[0_0_40px_rgba(0,255,136,0.3)] transition-all duration-500 hover:scale-105 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
+                  className={`group relative overflow-hidden rounded-2xl bg-surface-1 border-2 border-white/10 hover:border-[#e50914]/40 hover:shadow-[0_0_40px_rgba(229,9,20,0.3)] transition-all duration-500 hover:scale-105 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
                   onClick={() => {
                     // Click card to play inline if audio exists
                     if (article.audioFiles.length > 0) {
@@ -615,7 +615,7 @@ export default function LibraryPage() {
                   }}
                 >
                   {/* Featured Image */}
-                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20">
+                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#e50914]/20 to-[#e50914]/20">
                     {(article.generatedImageUrl || article.imageUrl) ? (
                       <img
                         src={article.generatedImageUrl || article.imageUrl || ''}
@@ -628,7 +628,7 @@ export default function LibraryPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <FileText className="w-16 h-16 sm:w-20 sm:h-20 text-[#00ff88]/40" />
+                        <FileText className="w-16 h-16 sm:w-20 sm:h-20 text-[#e50914]/40" />
                       </div>
                     )}
                     {/* Gradient Overlay */}
@@ -652,8 +652,8 @@ export default function LibraryPage() {
                           disabled={refreshingImageId === article.id}
                           className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110 ${
                             !article.imageUrl
-                              ? "bg-[#00d4ff]/90 hover:bg-[#00d4ff] opacity-100"
-                              : "bg-[#00d4ff]/90 hover:bg-[#00d4ff] opacity-0 group-hover:opacity-100"
+                              ? "bg-[#e50914]/90 hover:bg-[#e50914] opacity-100"
+                              : "bg-[#e50914]/90 hover:bg-[#e50914] opacity-0 group-hover:opacity-100"
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                           title={article.imageUrl ? "Refresh image" : "Fetch image"}
                         >
@@ -682,7 +682,7 @@ export default function LibraryPage() {
 
                     {/* Audio Status Badge */}
                     {article.audioFiles.length > 0 && (
-                      <div className="absolute top-4 right-4 bg-[#00ff88] text-black px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                      <div className="absolute top-4 right-4 bg-[#e50914] text-black px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg">
                         <Music className="w-3 h-3" />
                         {article.audioFiles.length}
                       </div>
@@ -692,17 +692,17 @@ export default function LibraryPage() {
                   {/* Article Info */}
                   <div className="p-6 space-y-4">
                     <div className="space-y-2">
-                      <h3 className="text-xl sm:text-2xl font-bold text-white line-clamp-2 group-hover:text-[#00ff88] transition-colors">
+                      <h3 className="text-xl sm:text-2xl font-bold text-white line-clamp-2 group-hover:text-[#e50914] transition-colors">
                         {article.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/60">
                         <span className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-[#00ff88]" />
+                          <FileText className="w-3.5 h-3.5 text-[#e50914]" />
                           {article.wordCount.toLocaleString()}
                         </span>
                         <span className="text-white/30">•</span>
                         <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#00d4ff]" />
+                          <Calendar className="w-3.5 h-3.5 text-[#e50914]" />
                           {formatDate(article.createdAt)}
                         </span>
                         {article.sourceUrl && (
@@ -738,7 +738,7 @@ export default function LibraryPage() {
                         {article.categories.slice(0, 2).map((category, idx) => (
                           <span
                             key={`cat-${idx}`}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-gradient-to-r from-[#00ff88]/20 to-[#00d4ff]/20 text-[#00ff88] border border-[#00ff88]/30"
+                            className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-gradient-to-r from-[#e50914]/20 to-[#e50914]/20 text-[#e50914] border border-[#e50914]/30"
                           >
                             {category}
                           </span>
@@ -770,7 +770,7 @@ export default function LibraryPage() {
                           <Button
                             onClick={() => handlePlayAudio(article.audioFiles[0], article)}
                             size="sm"
-                            className="flex-1 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-semibold shadow-lg"
+                            className="flex-1 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 font-semibold shadow-lg"
                           >
                             <Play className="w-3.5 h-3.5 mr-1.5" fill="black" />
                             Play
@@ -779,7 +779,7 @@ export default function LibraryPage() {
                             onClick={() => handleDownload(article.audioFiles[0].blobUrl, article.id, article.audioFiles[0].voiceName)}
                             size="sm"
                             variant="outline"
-                            className="flex-1 border-[#00ff88] text-[#00ff88] hover:bg-[#00ff88]/10"
+                            className="flex-1 border-[#e50914] text-[#e50914] hover:bg-[#e50914]/10"
                           >
                             <Download className="w-3.5 h-3.5 mr-1.5" />
                             Download
@@ -789,7 +789,7 @@ export default function LibraryPage() {
                         <Button
                           onClick={() => router.push(`/voice-select/${article.id}`)}
                           size="sm"
-                          className="flex-1 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-semibold"
+                          className="flex-1 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 font-semibold"
                         >
                           <Plus className="w-3.5 h-3.5 mr-1.5" />
                           Generate Audio
@@ -806,13 +806,13 @@ export default function LibraryPage() {
 
       {/* Integrated Audio Player - Fixed at Bottom */}
       {nowPlaying && (
-        <div className="fixed bottom-0 left-0 right-0 bg-surface-1 border-t-2 border-[#00ff88]/30 backdrop-blur-xl z-50 shadow-2xl shadow-[#00ff88]/20 animate-slideInFromBottom">
+        <div className="fixed bottom-0 left-0 right-0 bg-surface-1 border-t-2 border-[#e50914]/30 backdrop-blur-xl z-50 shadow-2xl shadow-[#e50914]/20 animate-slideInFromBottom">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col sm:flex-row items-center gap-4">
               {/* Track Info */}
               <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20 flex items-center justify-center border-2 border-[#00ff88]/30 flex-shrink-0">
-                  <Music className="w-7 h-7 sm:w-8 sm:h-8 text-[#00ff88]" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-[#e50914]/20 to-[#e50914]/20 flex items-center justify-center border-2 border-[#e50914]/30 flex-shrink-0">
+                  <Music className="w-7 h-7 sm:w-8 sm:h-8 text-[#e50914]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-base sm:text-lg font-bold text-white truncate">
@@ -843,7 +843,7 @@ export default function LibraryPage() {
                   <Button
                     size="icon"
                     onClick={togglePlayPause}
-                    className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 rounded-full shadow-lg shadow-[#00ff88]/30"
+                    className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 rounded-full shadow-lg shadow-[#e50914]/30"
                   >
                     {isPlaying ? (
                       <Pause className="w-5 h-5 sm:w-6 sm:h-6" fill="black" />
@@ -877,7 +877,7 @@ export default function LibraryPage() {
                     max={duration || 0}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00ff88] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(0,255,136,0.5)] hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
+                    className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(229,9,20,0.5)] hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
                   />
                   <span className="text-xs text-white/50 min-w-[40px] text-right">
                     {formatTime(duration)}
@@ -896,7 +896,7 @@ export default function LibraryPage() {
                     step="0.1"
                     value={volume}
                     onChange={handleVolumeChange}
-                    className="w-20 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00d4ff] [&::-webkit-slider-thumb]:cursor-pointer"
+                    className="w-20 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:cursor-pointer"
                   />
                 </div>
 
