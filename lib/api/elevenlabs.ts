@@ -52,7 +52,7 @@ export async function generateSpeech(options: TTSOptions): Promise<Response> {
   const {
     text,
     voiceId,
-    model_id = "eleven_turbo_v2_5",
+    model_id = "eleven_v3",
     voice_settings = {
       stability: 0.5,
       similarity_boost: 0.8,
@@ -105,7 +105,7 @@ export async function generateSpeech(options: TTSOptions): Promise<Response> {
 
     // Add text length info for character limit errors
     if (errorText.includes('max_character_limit_exceeded')) {
-      errorMessage = `Text too long (${text.length} characters). Maximum is 30,000 characters. The text should have been chunked - this is a bug in the chunking logic.`;
+      errorMessage = `Text too long (${text.length} characters). Maximum is 5,000 characters for Eleven v3 model. The text should have been chunked - this is a bug in the chunking logic.`;
     }
 
     throw new Error(`Failed to generate speech: ${errorMessage}`);

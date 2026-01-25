@@ -184,8 +184,8 @@ export async function POST(request: NextRequest) {
             .set({ status: "generating", progress: 50, currentStep: "Generating audio" })
             .where(eq(processingJobs.id, job.id));
 
-          // Chunk text if needed (ElevenLabs max is 30k characters)
-          const MAX_CHUNK_SIZE = 25000; // Conservative limit for safety
+          // Chunk text if needed (ElevenLabs Eleven v3 has 5,000 character limit)
+          const MAX_CHUNK_SIZE = 4500; // Conservative limit for safety (500 char buffer)
           const chunks: string[] = [];
 
           if (textToSpeak.length <= MAX_CHUNK_SIZE) {
@@ -242,8 +242,8 @@ export async function POST(request: NextRequest) {
           console.log(`Text split into ${chunks.length} chunks`);
           for (let i = 0; i < chunks.length; i++) {
             console.log(`Chunk ${i + 1} length: ${chunks[i].length} characters`);
-            if (chunks[i].length > 30000) {
-              throw new Error(`Chunk ${i + 1} exceeds 30,000 character limit (${chunks[i].length} chars)`);
+            if (chunks[i].length > 5000) {
+              throw new Error(`Chunk ${i + 1} exceeds 5,000 character limit for Eleven v3 (${chunks[i].length} chars)`);
             }
           }
 
