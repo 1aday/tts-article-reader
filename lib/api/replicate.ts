@@ -58,13 +58,11 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
       "Prefer": "wait" // Wait for result instead of immediate return
     },
     body: JSON.stringify({
-      version: "nanobananama/nano-banana", // Nano Banana model
+      version: "black-forest-labs/flux-1.1-pro",
       input: {
         prompt,
         aspect_ratio: aspectRatio,
-        resolution,
         output_format: outputFormat,
-        safety_filter_level: safetyFilterLevel,
         image_input: [] // No input images for article covers
       }
     })
