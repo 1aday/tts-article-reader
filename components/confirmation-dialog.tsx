@@ -49,21 +49,21 @@ export function ConfirmationDialog({
         onClick={handleBackdropClick}
       >
         {/* Dialog */}
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 bg-[--color-background-elevated] border border-[--color-border] rounded-lg shadow-2xl animate-scaleIn">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 bg-[#1a1a1a] border border-[#00ff4133] rounded-lg shadow-2xl animate-scaleIn">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               {variant === "danger" && (
-                <div className="p-2 bg-[--color-error]/10 rounded-full">
-                  <AlertTriangle className="h-6 w-6 text-[--color-error]" />
+                <div className="p-2 bg-red-500/10 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
                 </div>
               )}
               <h2
                 className={cn(
                   "text-xl font-bold",
                   variant === "danger"
-                    ? "text-[--color-error]"
-                    : "text-[--color-text]"
+                    ? "text-red-500"
+                    : "text-[#00ff88]"
                 )}
               >
                 {title}
@@ -72,14 +72,14 @@ export function ConfirmationDialog({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-[--color-text-secondary] hover:text-[--color-text] transition-colors disabled:opacity-50"
+              className="text-gray-400 hover:text-[#00ff88] transition-colors disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Message */}
-          <p className="text-[--color-text-secondary] mb-6 leading-relaxed">
+          <p className="text-gray-300 mb-6 leading-relaxed">
             {message}
           </p>
 

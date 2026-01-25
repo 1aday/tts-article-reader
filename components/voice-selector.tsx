@@ -81,13 +81,13 @@ export function VoiceSelector({
         type="button"
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full justify-between bg-[--color-background-elevated] border-[--color-border] hover:border-[--terminal-cyan] transition-all"
+        className="w-full justify-between bg-[#1a1a1a] border-[#00ff4133] hover:border-[--terminal-cyan] transition-all"
         disabled={loading}
       >
         <span className="truncate">{loading ? "Loading voices..." : displayText}</span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 transition-transform text-[--color-text-secondary]",
+            "h-4 w-4 transition-transform text-gray-400",
             isOpen && "transform rotate-180"
           )}
         />
@@ -95,17 +95,17 @@ export function VoiceSelector({
 
       {/* Dropdown */}
       {isOpen && !loading && (
-        <div className="absolute z-50 w-full mt-2 bg-[--color-background-elevated] border border-[--color-border] rounded-lg shadow-xl max-h-96 overflow-hidden animate-fadeIn">
+        <div className="absolute z-50 w-full mt-2 bg-[#1a1a1a] border border-[#00ff4133] rounded-lg shadow-xl max-h-96 overflow-hidden animate-fadeIn">
           {/* Search Input */}
-          <div className="p-3 border-b border-[--color-border]">
+          <div className="p-3 border-b border-[#00ff4133]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[--color-text-secondary]" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
                 placeholder="Search voices..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-[--color-background] border-[--color-border]"
+                className="pl-10 bg-[#0a0a0a] border-[#00ff4133]"
                 autoFocus
               />
             </div>
@@ -114,7 +114,7 @@ export function VoiceSelector({
           {/* Voice List */}
           <div className="max-h-80 overflow-y-auto custom-scrollbar">
             {filteredVoices.length === 0 ? (
-              <div className="p-4 text-center text-[--color-text-secondary]">
+              <div className="p-4 text-center text-gray-400">
                 No voices found
               </div>
             ) : (
@@ -134,7 +134,7 @@ export function VoiceSelector({
                         "w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-all text-left",
                         isSelected
                           ? "bg-[--terminal-cyan]/20 text-[--terminal-cyan]"
-                          : "hover:bg-[--color-background-hover] text-[--color-text]"
+                          : "hover:bg-[#151515] text-[#00ff88]"
                       )}
                     >
                       <span className="font-medium">{voice.name}</span>

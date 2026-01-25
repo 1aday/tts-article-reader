@@ -101,9 +101,9 @@ export default function CreatePage() {
         </div>
 
         {/* Enhanced Main Content with Animation */}
-        <div className="bg-surface-1 backdrop-blur-md border-2 border-white/10 rounded-3xl p-8 sm:p-10 md:p-14 shadow-2xl animate-fadeInUp">
+        <div className="bg-[#121212] backdrop-blur-md border-2 border-white/10 rounded-3xl p-8 sm:p-10 md:p-14 shadow-2xl animate-fadeInUp">
           <Tabs defaultValue="url" className="space-y-8 sm:space-y-10 md:space-y-12">
-            <TabsList className="grid w-full grid-cols-2 bg-surface-2 p-2 rounded-2xl border-2 border-white/10 h-auto shadow-lg">
+            <TabsList className="grid w-full grid-cols-2 bg-[#1a1a1a] p-2 rounded-2xl border-2 border-white/10 h-auto shadow-lg">
               <TabsTrigger
                 value="url"
                 className="h-14 sm:h-16 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00ff88] data-[state=active]:to-[#00d4ff] data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-[#00ff88]/30 data-[state=inactive]:text-white/70 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5 text-white rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2"
@@ -152,7 +152,7 @@ export default function CreatePage() {
                 </Button>
               </form>
 
-              <div className="bg-surface-2 border-2 border-white/10 rounded-2xl p-6 sm:p-8 animate-fadeInUp stagger-1">
+              <div className="bg-[#1a1a1a] border-2 border-white/10 rounded-2xl p-6 sm:p-8 animate-fadeInUp stagger-1">
                 <p className="text-sm sm:text-base font-semibold text-[#00d4ff] mb-4 sm:mb-5 flex items-center gap-2">
                   <span className="text-lg">✓</span>
                   Supported Sites

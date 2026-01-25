@@ -36,7 +36,7 @@ function Slider({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-[--color-text]">
+        <label className="text-sm font-medium text-[#00ff88]">
           {label}
         </label>
         <span className="text-sm font-mono text-[--terminal-cyan]">
@@ -44,7 +44,7 @@ function Slider({
         </span>
       </div>
       {tooltip && (
-        <p className="text-xs text-[--color-text-secondary] mb-1">{tooltip}</p>
+        <p className="text-xs text-gray-400 mb-1">{tooltip}</p>
       )}
       <input
         type="range"
@@ -53,7 +53,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-2 bg-[--color-background] rounded-lg appearance-none cursor-pointer slider-thumb"
+        className="w-full h-2 bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer slider-thumb"
       />
     </div>
   );
@@ -81,7 +81,7 @@ export function AudioSettingsPanel({
     <div className={cn("space-y-6", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[--color-text]">
+        <h3 className="text-lg font-semibold text-[#00ff88]">
           Voice Settings
         </h3>
         <button
@@ -117,12 +117,12 @@ export function AudioSettingsPanel({
       </div>
 
       {/* Speaker Boost Toggle */}
-      <div className="flex items-center justify-between p-4 bg-[--color-background] rounded-lg border border-[--color-border]">
+      <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg border border-[#00ff4133]">
         <div className="flex-1">
-          <label className="text-sm font-medium text-[--color-text] block mb-1">
+          <label className="text-sm font-medium text-[#00ff88] block mb-1">
             Speaker Boost
           </label>
-          <p className="text-xs text-[--color-text-secondary]">
+          <p className="text-xs text-gray-400">
             Enhances voice clarity and presence for better audio quality.
           </p>
         </div>
@@ -145,7 +145,7 @@ export function AudioSettingsPanel({
 
       {/* Presets */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-[--color-text]">
+        <label className="text-sm font-medium text-[#00ff88]">
           Quick Presets
         </label>
         <div className="grid grid-cols-3 gap-2">
@@ -156,7 +156,7 @@ export function AudioSettingsPanel({
               onStyleChange(0.3);
               onUseSpeakerBoostChange(true);
             }}
-            className="px-3 py-2 text-sm bg-[--color-background] border border-[--color-border] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
+            className="px-3 py-2 text-sm bg-[#0a0a0a] border border-[#00ff4133] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
           >
             Expressive
           </button>
@@ -167,7 +167,7 @@ export function AudioSettingsPanel({
               onStyleChange(0.1);
               onUseSpeakerBoostChange(true);
             }}
-            className="px-3 py-2 text-sm bg-[--color-background] border border-[--color-border] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
+            className="px-3 py-2 text-sm bg-[#0a0a0a] border border-[#00ff4133] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
           >
             Stable
           </button>
@@ -178,7 +178,7 @@ export function AudioSettingsPanel({
               onStyleChange(0);
               onUseSpeakerBoostChange(true);
             }}
-            className="px-3 py-2 text-sm bg-[--color-background] border border-[--color-border] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
+            className="px-3 py-2 text-sm bg-[#0a0a0a] border border-[#00ff4133] rounded-md hover:border-[--terminal-cyan] hover:text-[--terminal-cyan] transition-colors"
           >
             Balanced
           </button>

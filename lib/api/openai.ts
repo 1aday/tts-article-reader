@@ -31,7 +31,6 @@ export async function enhanceText(text: string): Promise<AsyncIterable<string>> 
       },
     ],
     stream: true,
-    temperature: 0.3,
     verbosity: "medium",
     reasoning_effort: "low",
   });

@@ -98,7 +98,7 @@ export function FilterBar({
   if (loading) {
     return (
       <div className="w-full py-4 flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading filters...</div>
+        <div className="text-sm text-gray-400">Loading filters...</div>
       </div>
     );
   }
@@ -112,9 +112,9 @@ export function FilterBar({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Filter Articles</h3>
+          <h3 className="text-sm font-semibold text-[#00ff88]">Filter Articles</h3>
           {activeFilterCount > 0 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-gray-400">
               {activeFilterCount} active
             </span>
           )}
@@ -124,7 +124,7 @@ export function FilterBar({
             variant="ghost"
             size="sm"
             onClick={onClearAll}
-            className="h-8 text-xs hover:text-destructive"
+            className="h-8 text-xs text-gray-400 hover:text-red-500"
           >
             <X className="h-3 w-3 mr-1" />
             Clear All
@@ -138,7 +138,7 @@ export function FilterBar({
         {showLeftScroll && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-surface-3/95 backdrop-blur-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-4"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#00ff88]"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -164,7 +164,7 @@ export function FilterBar({
                   ${
                     isActive
                       ? "bg-gradient-to-r from-[#00ff88]/20 to-[#00d4ff]/20 border-[#00ff88]/50 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] scale-105"
-                      : "bg-surface-2 border-border text-foreground hover:bg-surface-3 hover:border-[#00ff88]/30 hover:scale-105"
+                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-[#00ff88]/30 hover:scale-105"
                   }
                 `}
               >
@@ -189,7 +189,7 @@ export function FilterBar({
                   ${
                     isActive
                       ? "bg-purple-500/20 border-purple-500/50 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)] scale-105"
-                      : "bg-surface-2 border-border text-muted-foreground hover:bg-surface-3 hover:border-purple-500/30 hover:scale-105"
+                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-purple-500/30 hover:scale-105"
                   }
                 `}
               >
@@ -206,7 +206,7 @@ export function FilterBar({
         {showRightScroll && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-surface-3/95 backdrop-blur-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-4"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#00ff88]"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-4 w-4" />
