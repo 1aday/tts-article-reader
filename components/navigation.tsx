@@ -14,15 +14,15 @@ export function Navigation() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#141414]/95 backdrop-blur-xl border-b border-[#404040]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <button
             onClick={() => router.push("/")}
-            className="flex items-center gap-2 text-xl font-bold gradient-terminal hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-xl font-bold text-white hover:text-[#e50914] transition-colors"
           >
-            <Music className="w-6 h-6" />
+            <Music className="w-6 h-6 text-[#e50914]" />
             <span className="hidden sm:inline">TTS Reader</span>
           </button>
 
@@ -34,7 +34,7 @@ export function Navigation() {
               size="sm"
               className={`${
                 pathname === "/"
-                  ? "bg-[#00ff88]/20 text-[#00ff88]"
+                  ? "bg-[#e50914]/20 text-[#e50914]"
                   : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
@@ -48,7 +48,7 @@ export function Navigation() {
               size="sm"
               className={`${
                 pathname === "/library"
-                  ? "bg-[#00ff88]/20 text-[#00ff88]"
+                  ? "bg-[#e50914]/20 text-[#e50914]"
                   : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
@@ -59,7 +59,7 @@ export function Navigation() {
             <Button
               onClick={() => router.push("/create")}
               size="sm"
-              className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 font-semibold"
+              className="netflix-button netflix-button-primary font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">New Article</span>

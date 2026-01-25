@@ -4,17 +4,17 @@
  */
 
 export const CATEGORY_COLOR_SCHEMES: Record<string, string> = {
-  Technology: "terminal green (#00ff88), cyan (#00d4ff), dark navy blue",
+  Technology: "Netflix red (#e50914), crimson, dark navy blue",
   News: "purple (#a855f7), pink (#ec4899), charcoal gray",
   Politics: "purple (#a855f7), pink (#ec4899), charcoal gray",
   Business: "royal blue (#3b82f6), orange, slate gray",
-  Science: "cyan (#00d4ff), teal, white",
+  Science: "Netflix red (#e50914), crimson, white",
   Culture: "pink (#ec4899), peach, cream",
   Lifestyle: "pink (#ec4899), peach, cream",
   Entertainment: "pink (#ec4899), peach, cream",
   Sports: "orange (#fb923c), yellow, black",
   Health: "green (#10b981), mint, white",
-  default: "terminal green (#00ff88), white, black"
+  default: "Netflix red (#e50914), white, black"
 };
 
 interface StyleGuide {
@@ -47,7 +47,7 @@ function getCategoryStyleGuide(category: string): StyleGuide {
     Technology: {
       approach: "modern, forward-thinking innovation with clean lines and sophisticated design",
       composition: "Balanced composition with a clear focal point. Use dynamic angles that suggest progress and advancement. Incorporate subtle geometric elements or interface elements that don't overwhelm.",
-      style: "Contemporary professional photography with a tech-forward aesthetic. Color palette dominated by cool blues (#00d4ff), electric greens (#00ff88), and deep navy backgrounds. Clean, minimalist approach with pops of vibrant accent colors. Cinematic quality with shallow depth of field.",
+      style: "Contemporary professional photography with a tech-forward aesthetic. Color palette dominated by Netflix red (#e50914), crimson accents, and deep navy backgrounds. Clean, minimalist approach with pops of vibrant accent colors. Cinematic quality with shallow depth of field.",
       lighting: "Soft, diffused lighting with subtle blue/cyan tints suggesting digital environments. Rim lighting to separate subjects from background. Modern studio setup with controlled highlights.",
       publicationReference: "Wired or MIT Technology Review"
     },
@@ -79,7 +79,7 @@ function getCategoryStyleGuide(category: string): StyleGuide {
     Science: {
       approach: "awe-inspiring scientific imagery that makes complex concepts visually accessible and fascinating",
       composition: "Macro details or vast scale compositions that reveal hidden beauty in scientific subjects. Symmetry and pattern where relevant. Clear visual hierarchy leading to the key concept.",
-      style: "Scientific editorial photography with stunning detail. Color palette: brilliant cyans (#00d4ff), teal accents, and clean white or deep space backgrounds. Crisp focus, revealing texture and structure. May incorporate subtle data visualization.",
+      style: "Scientific editorial photography with stunning detail. Color palette: Netflix red (#e50914), crimson accents, and clean white or deep space backgrounds. Crisp focus, revealing texture and structure. May incorporate subtle data visualization.",
       lighting: "Clinical precision lighting that reveals detail, or dramatic lighting that emphasizes form and texture. May use colored gels (cyan, teal) for scientific aesthetic. High key or dramatic chiaroscuro depending on subject.",
       publicationReference: "National Geographic or Scientific American"
     },
@@ -127,7 +127,7 @@ function getCategoryStyleGuide(category: string): StyleGuide {
     default: {
       approach: "versatile, professional imagery that adapts to the specific article content",
       composition: "Balanced, intentional composition following rule of thirds. Clear focal point with supporting elements. Professional framing with purpose.",
-      style: "Editorial photography with contemporary aesthetic. Color palette: terminal green (#00ff88), clean whites, and deep blacks. Modern, sophisticated, adaptable to content.",
+      style: "Editorial photography with contemporary aesthetic. Color palette: Netflix red (#e50914), clean whites, and deep blacks. Modern, sophisticated, adaptable to content.",
       lighting: "Professional studio lighting or well-controlled natural light. Flattering, even illumination with subtle shadows for depth. Technical precision.",
       publicationReference: "The New Yorker or Medium publications"
     }

@@ -112,7 +112,7 @@ export function FilterBar({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-[#00ff88]">Filter Articles</h3>
+          <h3 className="text-sm font-semibold text-[#e50914]">Filter Articles</h3>
           {activeFilterCount > 0 && (
             <span className="text-xs text-gray-400">
               {activeFilterCount} active
@@ -138,7 +138,7 @@ export function FilterBar({
         {showLeftScroll && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#00ff88]"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#e50914]"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -163,8 +163,8 @@ export function FilterBar({
                   transition-all duration-300 border
                   ${
                     isActive
-                      ? "bg-gradient-to-r from-[#00ff88]/20 to-[#00d4ff]/20 border-[#00ff88]/50 text-[#00ff88] shadow-[0_0_20px_rgba(0,255,136,0.3)] scale-105"
-                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-[#00ff88]/30 hover:scale-105"
+                      ? "bg-gradient-to-r from-[#e50914]/20 to-[#e50914]/20 border-[#e50914]/50 text-[#e50914] shadow-[0_0_20px_rgba(229,9,20,0.3)] scale-105"
+                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-[#e50914]/30 hover:scale-105"
                   }
                 `}
               >
@@ -206,7 +206,7 @@ export function FilterBar({
         {showRightScroll && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#00ff88]"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#e50914]"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-4 w-4" />

@@ -36,7 +36,7 @@ function Slider({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-[#00ff88]">
+        <label className="text-sm font-medium text-[#e50914]">
           {label}
         </label>
         <span className="text-sm font-mono text-[--terminal-cyan]">
@@ -81,7 +81,7 @@ export function AudioSettingsPanel({
     <div className={cn("space-y-6", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#00ff88]">
+        <h3 className="text-lg font-semibold text-[#e50914]">
           Voice Settings
         </h3>
         <button
@@ -119,7 +119,7 @@ export function AudioSettingsPanel({
       {/* Speaker Boost Toggle */}
       <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg border border-[#00ff4133]">
         <div className="flex-1">
-          <label className="text-sm font-medium text-[#00ff88] block mb-1">
+          <label className="text-sm font-medium text-[#e50914] block mb-1">
             Speaker Boost
           </label>
           <p className="text-xs text-gray-400">
@@ -145,7 +145,7 @@ export function AudioSettingsPanel({
 
       {/* Presets */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-[#00ff88]">
+        <label className="text-sm font-medium text-[#e50914]">
           Quick Presets
         </label>
         <div className="grid grid-cols-3 gap-2">

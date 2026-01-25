@@ -63,7 +63,7 @@ export function ConfirmationDialog({
                   "text-xl font-bold",
                   variant === "danger"
                     ? "text-red-500"
-                    : "text-[#00ff88]"
+                    : "text-[#e50914]"
                 )}
               >
                 {title}
@@ -72,7 +72,7 @@ export function ConfirmationDialog({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-gray-400 hover:text-[#00ff88] transition-colors disabled:opacity-50"
+              className="text-gray-400 hover:text-[#e50914] transition-colors disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>

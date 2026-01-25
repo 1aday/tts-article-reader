@@ -134,7 +134,7 @@ export function VoiceSelector({
                         "w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-all text-left",
                         isSelected
                           ? "bg-[--terminal-cyan]/20 text-[--terminal-cyan]"
-                          : "hover:bg-[#151515] text-[#00ff88]"
+                          : "hover:bg-[#151515] text-[#e50914]"
                       )}
                     >
                       <span className="font-medium">{voice.name}</span>
