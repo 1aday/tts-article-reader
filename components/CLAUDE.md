@@ -8,4 +8,19 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #2640 | 11:39 PM | 🔵 | Audio Settings Panel Controls Four Voice Parameters | ~448 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #2813 | 3:57 PM | 🔴 | Fixed Voice List Item Hover and Text Color Styling | ~336 |
+| #2812 | " | ✅ | Changed Search Input Background to Dark Hardcoded Color in Voice Selector | ~355 |
+| #2811 | " | 🔴 | Fixed Secondary Text Visibility in Voice Selector | ~364 |
+| #2810 | " | 🔴 | Fixed Undefined CSS Variable in Voice Selector Component | ~347 |
+| #2809 | " | 🔵 | Voice Selector Component with Search and API Integration | ~454 |
+| #2808 | " | 🔴 | Fixed Border Visibility in Audio Settings Panel | ~395 |
+| #2807 | " | 🔴 | Fixed Undefined CSS Variable References in Audio Settings Panel | ~353 |
+| #2806 | " | ✅ | Changed Text Color from CSS Variable to Hardcoded Green in Audio Settings | ~357 |
+| #2805 | 3:56 PM | 🔴 | Fixed Delete Modal Dark Text Visibility Issue | ~557 |
+| #2803 | " | 🔵 | Reusable Confirmation Dialog Component with Danger Variant | ~457 |
 </claude-mem-context>

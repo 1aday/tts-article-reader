@@ -13,5 +13,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |
+| #2908 | 4:17 PM | 🔵 | Article Scraping API Integrates Firecrawl, Database Storage, and Automatic Categorization | ~462 |
 | #2661 | 12:11 AM | 🔵 | Article Scraping API with Firecrawl Integration and Auto-Categorization | ~545 |
 </claude-mem-context>

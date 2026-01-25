@@ -94,7 +94,7 @@ export function StageDetailsCard({
               icon={<Zap className="w-4 h-4" />}
               label="Enhancement Type"
               value="AI Optimization"
-              sublabel="OpenAI GPT-4o-mini"
+              sublabel="OpenAI GPT-5 nano"
             />
           </>
         )}

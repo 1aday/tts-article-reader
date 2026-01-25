@@ -14,6 +14,12 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
+| #2919 | 4:20 PM | 🔵 | Database Schema Uses PostgreSQL with Comprehensive Article and Taxonomy Tables | ~485 |
+| #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |
+| #2912 | " | 🔵 | Database Client Uses Vercel Postgres with Drizzle ORM | ~324 |
+| #2903 | 4:16 PM | 🔵 | Database Schema Supports Categories and Tags with Many-to-Many Relationships | ~556 |
+| #2786 | 3:34 PM | ✅ | Database Schema Migrated from SQLite to PostgreSQL for Production | ~566 |
 | #2771 | 3:29 PM | 🔴 | Database Schema Migration from SQLite to PostgreSQL Completed | ~447 |
 | #2770 | " | 🔴 | Article Categories Table Migrated from SQLite to PostgreSQL Schema | ~438 |
 | #2769 | 3:28 PM | 🔄 | Tags Table Schema Migrated from SQLite to PostgreSQL | ~419 |

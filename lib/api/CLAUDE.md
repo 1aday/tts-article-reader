@@ -21,6 +21,20 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3068 | 4:39 PM | 🔵 | Categorization System Also Uses GPT-4o-mini with Temperature 0.3 | ~401 |
+| #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
+| #2920 | " | 🔵 | Firecrawl Integration Extracts Article Content and Featured Images | ~514 |
+| #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |
+| #2911 | " | 🔵 | Categorization System Uses GPT-4o-mini with Dynamic Vocabulary Context | ~395 |
+| #2909 | 4:17 PM | 🔵 | OpenAI Client Uses GPT-5-Nano for Text Enhancement with Streaming | ~327 |
+| #2907 | " | 🔵 | Firecrawl API Client Extracts Open Graph Images from Article Metadata | ~366 |
+| #2878 | 4:06 PM | 🔴 | Removed Unsupported Temperature Parameter from GPT-5 Nano Implementation | ~435 |
+| #2877 | " | 🔄 | Removed Temperature Parameter from Desktop GPT-5 Nano Configuration | ~364 |
+| #2853 | 4:02 PM | 🔴 | Committed ElevenLabs Temperature Error Fix to Git | ~316 |
+| #2840 | 4:01 PM | 🔵 | Verified Complete Implementation of ElevenLabs API Parameter Filtering | ~358 |
+| #2833 | 4:00 PM | 🔄 | Removed style Parameter from TTSOptions Interface Type Definition | ~260 |
+| #2831 | " | 🔴 | Removed style Parameter from ElevenLabs API to Fix Temperature Error | ~340 |
+| #2827 | 3:59 PM | 🔵 | Current ElevenLabs API Configuration Uses v1 Endpoint with style Parameter | ~326 |
 | #2708 | 12:33 AM | 🟣 | Migrated Desktop Project from GPT-4o-mini to GPT-5 Nano | ~371 |
 | #2703 | 12:32 AM | 🔵 | Desktop Project Currently Uses GPT-4o-mini for Text Enhancement | ~334 |
 | #2651 | 12:07 AM | 🔴 | Added Diagnostic Logging to Text Enhancement Streaming | ~417 |

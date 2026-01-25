@@ -7,5 +7,8 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
+| #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |
+| #2906 | 4:17 PM | 🔵 | Bulk Image Refresh API Uses Firecrawl to Re-scrape Article Metadata | ~431 |
 | #2688 | 12:25 AM | 🟣 | Bulk Image Refresh API Endpoint for Re-scraping Article Metadata | ~568 |
 </claude-mem-context>

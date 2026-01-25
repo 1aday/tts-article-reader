@@ -8,4 +8,13 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #2462 | 9:54 PM | 🔵 | Comprehensive TTS Article Reader Codebase Infrastructure Analysis | ~860 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
+| #2915 | 4:20 PM | 🔵 | Library API Fetches All Articles with Audio Files, Categories, and Tags | ~482 |
+| #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |
+| #2904 | 4:17 PM | 🔵 | Library API Route Fetches Articles with Audio Files and Metadata | ~373 |
 </claude-mem-context>

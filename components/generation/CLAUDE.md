@@ -11,4 +11,11 @@
 | #2596 | " | 🟣 | Audio Size Sparkline Visualizes File Growth with Live and Ghost Bars | ~456 |
 | #2595 | 10:33 PM | 🟣 | Stage Details Card Component Shows Context-Aware Processing Information | ~498 |
 | #2594 | " | 🟣 | Time Metrics Cards Component Implemented with Elapsed, Remaining, and Speed Display | ~446 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #3069 | 4:39 PM | ✅ | Updated UI to Display GPT-5 Nano in Generation Progress Card | ~322 |
+| #3067 | " | 🔵 | Stage Details Card Shows GPT-4o-mini Still Referenced in UI | ~350 |
 </claude-mem-context>

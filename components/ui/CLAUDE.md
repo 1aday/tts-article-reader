@@ -19,4 +19,12 @@
 | #2386 | 8:44 PM | 🟣 | Button Loading State with Animated Spinner and Auto-Disable | ~549 |
 | #2385 | " | 🟣 | Enhanced Button Component with 7 New Variants, Glow Effects, and Refined Interactions | ~731 |
 | #2384 | " | 🔵 | Analyzed Standard shadcn/ui Button Component Implementation | ~481 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #2796 | 3:49 PM | 🔴 | Fixed Dark-on-Dark Text Contrast in Input and Textarea Components | ~464 |
+| #2795 | 3:47 PM | 🔴 | Textarea Component Text Color Fixed to White | ~356 |
+| #2794 | " | 🔴 | Input Component Text Color Fixed for Visibility | ~357 |
 </claude-mem-context>

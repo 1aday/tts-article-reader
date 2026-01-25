@@ -8,4 +8,13 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #2462 | 9:54 PM | 🔵 | Comprehensive TTS Article Reader Codebase Infrastructure Analysis | ~860 |
+
+### Jan 25, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #3029 | 4:32 PM | 🟣 | Implemented Vercel Blob Storage Integration for Production Audio Files | ~556 |
+| #2923 | 4:22 PM | 🟣 | Added Vercel Production Environment Support for Audio Storage | ~433 |
+| #2922 | 4:21 PM | 🔵 | Local File Storage System for Audio Files in Development Environment | ~460 |
+| #2910 | 4:17 PM | 🔵 | Audio Storage Uses Local Filesystem with Vercel Blob Placeholder | ~422 |
 </claude-mem-context>

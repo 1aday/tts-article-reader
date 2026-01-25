@@ -14,6 +14,11 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2853 | 4:02 PM | 🔴 | Committed ElevenLabs Temperature Error Fix to Git | ~316 |
+| #2838 | 4:00 PM | 🔵 | Verified Complete Removal of style Parameter from Generation Route | ~281 |
+| #2837 | " | 🔴 | Removed style Parameter from Voice Settings Object Construction | ~279 |
+| #2835 | " | 🔴 | Removed style Parameter from Generation Route Schema Validation | ~287 |
+| #2829 | " | 🔵 | Generation Route Sends style Parameter in Voice Settings to ElevenLabs | ~367 |
 | #2653 | 12:07 AM | 🔴 | Enhancement Timeout Protection Added to Generation Pipeline | ~458 |
 | #2648 | 12:03 AM | 🔵 | Audio Generation Pipeline with Text Enhancement and Chunking | ~605 |
 </claude-mem-context>

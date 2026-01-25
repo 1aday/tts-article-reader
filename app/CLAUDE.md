@@ -25,5 +25,8 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
+| #2902 | 4:16 PM | 🔵 | Analyzed Current Home Page Structure and Library Page Netflix-Style Implementation | ~545 |
+| #2901 | 4:15 PM | 🔵 | Current Homepage is Marketing Landing Page Without Article Library | ~396 |
 | #2672 | 12:15 AM | 🟣 | Cross-Browser Scrollbar Hide Utility Added to Global Styles | ~414 |
 </claude-mem-context>
