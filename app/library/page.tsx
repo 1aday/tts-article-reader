@@ -184,8 +184,14 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (nowPlaying && audioRef.current) {
-      audioRef.current.src = nowPlaying.audio.blobUrl;
-      audioRef.current.play();
+      // Use proxy for CORS compatibility
+      const proxyUrl = `/api/audio/proxy?url=${encodeURIComponent(nowPlaying.audio.blobUrl)}`;
+      audioRef.current.src = proxyUrl;
+      audioRef.current.load(); // Force reload
+      audioRef.current.play().catch((error) => {
+        console.error("Playback error:", error);
+        toast.error("Failed to play audio. Try downloading instead.");
+      });
     }
   }, [nowPlaying]);
 
@@ -461,7 +467,7 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="min-h-screen bg-black relative overflow-hidden pt-16">
       {/* Enhanced Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,255,136,0.12),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(0,212,255,0.08),transparent_50%)]" />
@@ -600,9 +606,9 @@ export default function LibraryPage() {
                   key={article.id}
                   className={`group relative overflow-hidden rounded-2xl bg-surface-1 border-2 border-white/10 hover:border-[#00ff88]/40 hover:shadow-[0_0_40px_rgba(0,255,136,0.3)] transition-all duration-500 hover:scale-105 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
                   onClick={() => {
-                    // Click to expand or navigate
+                    // Click card to play inline if audio exists
                     if (article.audioFiles.length > 0) {
-                      router.push(`/player/${article.audioFiles[0].id}`);
+                      handlePlayAudio(article.audioFiles[0], article);
                     } else {
                       router.push(`/voice-select/${article.id}`);
                     }
@@ -910,7 +916,16 @@ export default function LibraryPage() {
       )}
 
       {/* Hidden Audio Element */}
-      <audio ref={audioRef} />
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        onError={(e) => {
+          console.error("Audio playback error:", e);
+          toast.error("Failed to load audio. Please try downloading instead.");
+        }}
+        onLoadStart={() => console.log("Audio loading started")}
+        onCanPlay={() => console.log("Audio can play")}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog

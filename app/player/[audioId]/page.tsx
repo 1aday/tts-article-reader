@@ -418,7 +418,7 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden p-4">
+    <div className="min-h-screen bg-black relative overflow-hidden p-4 pt-16">
       {/* Animated background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,255,136,0.12),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,212,255,0.12),transparent_50%)]" />
@@ -505,10 +505,15 @@ export default function PlayerPage() {
 
             <audio
               ref={audioRef}
-              src={audioUrl}
+              src={audioUrl ? `/api/audio/proxy?url=${encodeURIComponent(audioUrl)}` : undefined}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleEnded}
+              onError={(e) => {
+                console.error("Audio playback error:", e);
+                toast.error("Failed to load audio. Please try downloading instead.");
+              }}
+              crossOrigin="anonymous"
               preload="metadata"
             />
 
