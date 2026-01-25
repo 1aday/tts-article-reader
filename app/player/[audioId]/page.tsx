@@ -428,7 +428,7 @@ export default function PlayerPage() {
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-[#00ff88] rounded-full opacity-20 animate-float"
+            className="absolute w-1 h-1 bg-[#e50914] rounded-full opacity-20 animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -457,7 +457,7 @@ export default function PlayerPage() {
                 </div>
               </div>
               {allAudioVersions.length > 1 && (
-                <div className="px-3 py-1 rounded-full bg-[#00d4ff]/10 border border-[#00d4ff]/20 text-[#00d4ff] text-sm">
+                <div className="px-3 py-1 rounded-full bg-[#e50914]/10 border border-[#e50914]/20 text-[#e50914] text-sm">
                   {allAudioVersions.length} versions
                 </div>
               )}
@@ -469,9 +469,9 @@ export default function PlayerPage() {
           <div className="space-y-8 sm:space-y-12">
             {/* Header with Audio Info */}
             <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/20">
-                <div className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
-                <span className="text-sm font-medium text-[#00ff88]">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e50914]/10 border border-[#e50914]/20">
+                <div className="w-2 h-2 rounded-full bg-[#e50914] animate-pulse" />
+                <span className="text-sm font-medium text-[#e50914]">
                   {playing ? "Now Playing" : "Ready"}
                 </span>
               </div>
@@ -484,21 +484,21 @@ export default function PlayerPage() {
               <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-white/50">
                 <div className="flex items-center gap-2">
                   <span>Duration:</span>
-                  <span className="text-[#00ff88]">{formatTime(duration)}</span>
+                  <span className="text-[#e50914]">{formatTime(duration)}</span>
                 </div>
                 {audioData?.fileSize && (
                   <>
                     <div className="w-px h-4 bg-white/20" />
                     <div className="flex items-center gap-2">
                       <span>Size:</span>
-                      <span className="text-[#00d4ff]">{formatFileSize(audioData.fileSize)}</span>
+                      <span className="text-[#e50914]">{formatFileSize(audioData.fileSize)}</span>
                     </div>
                   </>
                 )}
                 <div className="w-px h-4 bg-white/20" />
                 <div className="flex items-center gap-2">
                   <span>Speed:</span>
-                  <span className="text-[#00ff88]">{playbackRate}x</span>
+                  <span className="text-[#e50914]">{playbackRate}x</span>
                 </div>
               </div>
             </div>
@@ -538,30 +538,30 @@ export default function PlayerPage() {
               <div className="flex items-center justify-center gap-4 sm:gap-6">
                 <button
                   onClick={() => skip(-10)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#00ff88]/30 transition-all flex items-center justify-center group"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
                 >
-                  <SkipBack className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#00ff88] transition-colors" />
+                  <SkipBack className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#e50914] transition-colors" />
                 </button>
 
                 <button
                   onClick={togglePlay}
-                  className="relative group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-r from-[#00ff88] to-[#00d4ff] hover:opacity-90 transition-all hover:scale-105 shadow-2xl shadow-[#00ff88]/30 hover:shadow-[#00ff88]/50"
+                  className="relative group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-[#e50914] hover:bg-[#f40612] transition-all hover:scale-105 shadow-2xl shadow-[#e50914]/30 hover:shadow-[#e50914]/50"
                 >
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00ff88] to-[#00d4ff] blur-2xl opacity-50 group-hover:opacity-75 transition-opacity" />
+                  <div className="absolute inset-0 rounded-full bg-[#e50914] blur-2xl opacity-50 group-hover:opacity-75 transition-opacity" />
                   <div className="relative flex items-center justify-center w-full h-full">
                     {playing ? (
-                      <Pause className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-black" fill="black" />
+                      <Pause className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-white" fill="white" />
                     ) : (
-                      <Play className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-black ml-1 sm:ml-2" fill="black" />
+                      <Play className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-white ml-1 sm:ml-2" fill="white" />
                     )}
                   </div>
                 </button>
 
                 <button
                   onClick={() => skip(10)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#00d4ff]/30 transition-all flex items-center justify-center group"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
                 >
-                  <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#00d4ff] transition-colors" />
+                  <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#e50914] transition-colors" />
                 </button>
               </div>
 
@@ -570,7 +570,7 @@ export default function PlayerPage() {
                 <div className="relative group">
                   <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#00ff88] via-[#00d4ff] to-[#00ff88] rounded-full transition-all relative"
+                      className="h-full bg-[#e50914] rounded-full transition-all relative"
                       style={{ width: `${(currentTime / duration) * 100}%` }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
@@ -586,7 +586,7 @@ export default function PlayerPage() {
                   />
 
                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div className="px-3 py-1 rounded-lg bg-black/90 border border-[#00ff88]/30 text-xs text-white whitespace-nowrap">
+                    <div className="px-3 py-1 rounded-lg bg-black/90 border border-[#e50914]/30 text-xs text-white whitespace-nowrap">
                       {formatTime(currentTime)}
                     </div>
                   </div>
@@ -606,12 +606,12 @@ export default function PlayerPage() {
                     onClick={toggleMute}
                     onMouseEnter={() => setShowVolumeSlider(true)}
                     onMouseLeave={() => setTimeout(() => setShowVolumeSlider(false), 200)}
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#00ff88]/30 transition-all flex items-center justify-center group"
+                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
                   >
                     {muted || volume === 0 ? (
-                      <VolumeX className="w-5 h-5 text-white/70 group-hover:text-[#00ff88] transition-colors" />
+                      <VolumeX className="w-5 h-5 text-white/70 group-hover:text-[#e50914] transition-colors" />
                     ) : (
-                      <Volume2 className="w-5 h-5 text-white/70 group-hover:text-[#00ff88] transition-colors" />
+                      <Volume2 className="w-5 h-5 text-white/70 group-hover:text-[#e50914] transition-colors" />
                     )}
                   </button>
 
@@ -622,7 +622,7 @@ export default function PlayerPage() {
                       onMouseLeave={() => setShowVolumeSlider(false)}
                     >
                       <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] rounded-full"
+                        className="absolute inset-y-0 left-0 bg-[#e50914] rounded-full"
                         style={{ width: `${volume * 100}%` }}
                       />
                       <input
@@ -646,7 +646,7 @@ export default function PlayerPage() {
                       onClick={() => setPlaybackRate(speed)}
                       className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                         playbackRate === speed
-                          ? "bg-[#00ff88] text-black shadow-lg shadow-[#00ff88]/30"
+                          ? "bg-[#e50914] text-white shadow-lg shadow-[#e50914]/30"
                           : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
                       }`}
                     >
@@ -661,16 +661,16 @@ export default function PlayerPage() {
             <div className="border-t border-white/10 pt-6">
               <button
                 onClick={() => setShowRegeneratePanel(!showRegeneratePanel)}
-                className="w-full flex items-center justify-between p-4 bg-[#00d4ff]/5 hover:bg-[#00d4ff]/10 border border-[#00d4ff]/20 rounded-xl transition-all group"
+                className="w-full flex items-center justify-between p-4 bg-[#e50914]/5 hover:bg-[#e50914]/10 border border-[#e50914]/20 rounded-xl transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <RefreshCw className="w-5 h-5 text-[#00d4ff]" />
+                  <RefreshCw className="w-5 h-5 text-[#e50914]" />
                   <span className="text-white font-semibold">Regenerate Audio</span>
                 </div>
                 {showRegeneratePanel ? (
-                  <ChevronUp className="w-5 h-5 text-white/50 group-hover:text-[#00d4ff] transition-colors" />
+                  <ChevronUp className="w-5 h-5 text-white/50 group-hover:text-[#e50914] transition-colors" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-white/50 group-hover:text-[#00d4ff] transition-colors" />
+                  <ChevronDown className="w-5 h-5 text-white/50 group-hover:text-[#e50914] transition-colors" />
                 )}
               </button>
 
@@ -718,7 +718,7 @@ export default function PlayerPage() {
                       onClick={handleRegenerate}
                       loading={regenerating}
                       disabled={regenerating || !selectedVoiceId}
-                      className="flex-1 bg-gradient-to-r from-[#00d4ff] to-[#7c3aed] text-white hover:opacity-90"
+                      className="flex-1 netflix-button netflix-button-primary"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Generate New Audio
@@ -732,7 +732,7 @@ export default function PlayerPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-6 border-t border-white/10">
               <Button
                 onClick={handleDownload}
-                className="bg-gradient-to-r from-[#00d4ff] to-[#7c3aed] text-white hover:opacity-90 h-12 sm:h-14 rounded-xl font-bold text-sm sm:text-base"
+                className="netflix-button netflix-button-primary h-12 sm:h-14 rounded-xl font-bold text-sm sm:text-base"
               >
                 <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Download
@@ -740,8 +740,7 @@ export default function PlayerPage() {
 
               <Button
                 onClick={() => router.push("/library")}
-                variant="outline"
-                className="border-2 border-white/20 bg-white/5 text-white hover:bg-white/10 h-12 sm:h-14 rounded-xl font-semibold"
+                className="netflix-button netflix-button-secondary h-12 sm:h-14 rounded-xl font-semibold"
               >
                 <Library className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Library
@@ -783,7 +782,7 @@ export default function PlayerPage() {
                       <button
                         key={version.id}
                         onClick={() => router.push(`/player/${version.id}`)}
-                        className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#00d4ff]/30 rounded-lg transition-all text-left"
+                        className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 rounded-lg transition-all text-left"
                       >
                         <div>
                           <div className="text-white font-medium">{version.voiceName}</div>
@@ -791,7 +790,7 @@ export default function PlayerPage() {
                             {formatTime(version.duration)} • {formatFileSize(version.fileSize)} • {formatDate(version.createdAt)}
                           </div>
                         </div>
-                        <Play className="w-5 h-5 text-[#00d4ff]" />
+                        <Play className="w-5 h-5 text-[#e50914]" />
                       </button>
                     ))}
                 </div>
