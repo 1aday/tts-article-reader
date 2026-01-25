@@ -54,11 +54,11 @@ export async function POST(req: NextRequest) {
         ? JSON.parse(article.categoriesJson)
         : [];
 
-      // Build prompt with category colors and article context
+      // Build prompt with article context (use more text for better relevance)
       const prompt = buildImagePrompt({
         title: article.title,
         categories,
-        summary: article.originalText.slice(0, 300)
+        summary: article.originalText?.slice(0, 500) || article.title
       });
 
       console.log("[Image Generation] Generated prompt:", {

@@ -37,22 +37,27 @@ export function buildImagePrompt(article: {
   categories: string[];
   summary?: string;
 }): string {
-  const primaryCategory = article.categories[0] || "default";
-  const colorScheme = CATEGORY_COLOR_SCHEMES[primaryCategory] || CATEGORY_COLOR_SCHEMES.default;
   const subject = extractKeySubject(article.title);
-  const contextSnippet = article.summary?.slice(0, 200) || article.title;
+  const contextSnippet = article.summary?.slice(0, 400) || article.title;
 
   return `
-Editorial illustration in a modern minimalist style with bold geometric shapes.
+Create a professional, high-quality cover image for an article titled "${article.title}".
 
-Subject: ${subject}
+The image should visually represent the main topic: ${subject}
 
-Style: Flat design with overlapping shapes, clean lines, subtle paper texture.
-Limited color palette: ${colorScheme}.
-Professional, sophisticated composition. No text, typography, or words.
-Abstract representation of: ${contextSnippet}
+Article context: ${contextSnippet}
 
-Aspect: 3:4 portrait orientation
+Style: Professional editorial photography or digital illustration, magazine cover quality, cinematic, highly detailed, realistic or stylized illustration depending on subject matter.
+
+Requirements:
+- Directly related to the article subject and content
+- Visually striking and engaging
+- Professional publication quality
+- No text, logos, or typography in the image
+- Suitable for use as an article header or thumbnail
+- 3:4 portrait orientation
+
+Create an image that clearly represents what this article is about.
   `.trim();
 }
 

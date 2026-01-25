@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
             ? JSON.parse(article.categoriesJson)
             : [];
 
-          // Build prompt
+          // Build prompt (use more text for better relevance)
           const prompt = buildImagePrompt({
             title: article.title,
             categories,
-            summary: article.originalText?.slice(0, 300) || article.title
+            summary: article.originalText?.slice(0, 500) || article.title
           });
 
           // Generate image
