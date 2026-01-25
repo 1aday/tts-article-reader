@@ -13,6 +13,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3073 | 4:42 PM | ✅ | Added Comprehensive Logging to Blob Storage Upload Function for Production Debugging | ~473 |
 | #3029 | 4:32 PM | 🟣 | Implemented Vercel Blob Storage Integration for Production Audio Files | ~556 |
 | #2923 | 4:22 PM | 🟣 | Added Vercel Production Environment Support for Audio Storage | ~433 |
 | #2922 | 4:21 PM | 🔵 | Local File Storage System for Audio Files in Development Environment | ~460 |

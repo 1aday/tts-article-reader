@@ -23,14 +23,26 @@ export async function uploadAudio(
   if (isProduction) {
     // Production: Use Vercel Blob Storage
     try {
+      console.log("[Blob Storage] Attempting upload:", {
+        filename,
+        bufferSize: buffer.length,
+        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+      });
+
       const blob = await put(filename, buffer, {
         access: "public",
         addRandomSuffix: false,
       });
+
+      console.log("[Blob Storage] Upload successful:", blob.url);
       return blob.url;
     } catch (error) {
-      console.error("Failed to upload to Vercel Blob:", error);
-      throw new Error("Failed to upload audio file to storage");
+      console.error("[Blob Storage] Upload failed:", {
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw new Error(`Failed to upload audio file to storage: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
     // Development: Use local filesystem
