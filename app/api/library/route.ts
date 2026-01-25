@@ -36,6 +36,8 @@ export async function GET() {
           sourceType: article.sourceType,
           sourceUrl: article.sourceUrl,
           imageUrl: article.imageUrl,
+          generatedImageUrl: article.generatedImageUrl,
+          imageGenerationStatus: article.imageGenerationStatus,
           categories,
           tags,
           categorizationStatus: article.categorizationStatus || "pending",

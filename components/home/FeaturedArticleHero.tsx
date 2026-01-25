@@ -11,7 +11,9 @@ interface FeaturedArticleHeroProps {
 
 export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
   const displayImage = article.generatedImageUrl || article.imageUrl || "/default-hero.jpg";
-  const summary = article.originalText.slice(0, 200) + "...";
+  const summary = article.originalText
+    ? article.originalText.slice(0, 200) + "..."
+    : "Click to read and listen to this article.";
   const hasAudio = article.audioFiles && article.audioFiles.length > 0;
   const firstAudioId = article.audioFiles?.[0]?.id;
 
