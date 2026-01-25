@@ -22,13 +22,37 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [articlesRes, filtersRes] = await Promise.all([
+        console.log('[Home] Starting data fetch...');
+
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        );
+
+        const fetchPromise = Promise.all([
           fetch('/api/library'),
           fetch('/api/library/filters')
         ]);
 
+        const [articlesRes, filtersRes] = await Promise.race([
+          fetchPromise,
+          timeoutPromise
+        ]) as [Response, Response];
+
+        console.log('[Home] Fetch responses received:', {
+          articlesStatus: articlesRes.status,
+          filtersStatus: filtersRes.status
+        });
+
         const articlesData = await articlesRes.json();
         const filtersData = await filtersRes.json();
+
+        console.log('[Home] Data parsed:', {
+          articlesSuccess: articlesData.success,
+          articleCount: articlesData.articles?.length,
+          filtersSuccess: filtersData.success,
+          categoryCount: filtersData.categories?.length
+        });
 
         if (articlesData.success) {
           setArticles(articlesData.articles);
@@ -39,6 +63,8 @@ export default function Home() {
             (!a.imageGenerationStatus || a.imageGenerationStatus === 'pending' || a.imageGenerationStatus === 'failed')
           );
 
+          console.log('[Home] Articles needing images:', needsImages.length);
+
           if (needsImages.length > 0) {
             generateMissingImages();
           }
@@ -48,8 +74,13 @@ export default function Home() {
           setCategories(filtersData.categories.map((c: any) => c.name));
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        console.error('[Home] Failed to fetch data:', error);
+        toast.error(
+          `Failed to load library: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          { duration: 5000 }
+        );
       } finally {
+        console.log('[Home] Setting loading to false');
         setLoading(false);
       }
     }
