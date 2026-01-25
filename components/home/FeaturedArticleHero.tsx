@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
-import { Play, Info } from "lucide-react";
+import { Play, Info, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface FeaturedArticleHeroProps {
@@ -10,7 +10,7 @@ interface FeaturedArticleHeroProps {
 }
 
 export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
-  const displayImage = article.generatedImageUrl || article.imageUrl || "/default-hero.jpg";
+  const displayImage = article.generatedImageUrl || article.imageUrl;
   const summary = article.originalText
     ? article.originalText.slice(0, 200) + "..."
     : "Click to read and listen to this article.";
@@ -18,16 +18,30 @@ export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
   const firstAudioId = article.audioFiles?.[0]?.id;
 
   return (
-    <div className="relative h-[60vh] min-h-[400px] overflow-hidden">
-      {/* Background Image */}
+    <div className="relative h-[60vh] min-h-[400px] overflow-hidden bg-gradient-to-br from-[#00ff88]/10 to-[#00d4ff]/10">
+      {/* Background Image or Gradient */}
       <div className="absolute inset-0">
-        <img
-          src={displayImage}
-          alt={article.title}
-          className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
-        />
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+        {displayImage ? (
+          <>
+            <img
+              src={displayImage}
+              alt={article.title}
+              className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+          </>
+        ) : (
+          <>
+            {/* Gradient Background with Icon */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-20">
+              <FileText className="w-48 h-48 text-[#00ff88]" />
+            </div>
+            {/* Gradient Overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+          </>
+        )}
       </div>
 
       {/* Content Overlay */}

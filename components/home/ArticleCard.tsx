@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, FileText } from "lucide-react";
 
 interface ArticleCardProps {
   article: Article & {
@@ -9,7 +9,7 @@ interface ArticleCardProps {
 }
 
 export function ArticleCard({ article }: ArticleCardProps) {
-  const displayImage = article.generatedImageUrl || article.imageUrl || "/default-card.jpg";
+  const displayImage = article.generatedImageUrl || article.imageUrl;
   const hasAudio = article.audioFiles && article.audioFiles.length > 0;
   const isGenerating = article.imageGenerationStatus === "generating";
 
@@ -20,20 +20,28 @@ export function ArticleCard({ article }: ArticleCardProps) {
 
   return (
     <Link href={href} className="carousel-card">
-      <div className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer bg-neutral-900">
-        {/* Generated/Featured Image */}
-        <img
-          src={displayImage}
-          alt={article.title}
-          className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-300"
-          onError={(e) => {
-            // Fallback to placeholder on image load error
-            e.currentTarget.src = "/default-card.jpg";
-          }}
-        />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+      <div className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20">
+        {displayImage ? (
+          <>
+            {/* Generated/Featured Image */}
+            <img
+              src={displayImage}
+              alt={article.title}
+              className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-300"
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          </>
+        ) : (
+          <>
+            {/* Placeholder Icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="w-16 h-16 text-[#00ff88]/40" />
+            </div>
+            {/* Gradient Overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+          </>
+        )}
 
         {/* Hover Play Button */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
