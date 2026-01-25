@@ -3,9 +3,12 @@ import { join } from "path";
 import { existsSync } from "fs";
 
 // Simple local file storage for development
-// In production, replace with Vercel Blob
+// In production (Vercel), use /tmp directory (only writable location)
 
-const STORAGE_DIR = join(process.cwd(), "storage", "audio");
+const isProduction = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+const STORAGE_DIR = isProduction
+  ? "/tmp/audio"  // Vercel serverless: only /tmp is writable
+  : join(process.cwd(), "storage", "audio");
 
 async function ensureStorageDir() {
   if (!existsSync(STORAGE_DIR)) {
