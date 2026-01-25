@@ -230,11 +230,11 @@ export default function VoiceSelectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.08),transparent_50%)]" />
+      <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.15),transparent_70%)]" />
         <div className="relative">
           <div className="flex items-center gap-3 text-xl text-white/60">
-            <div className="w-6 h-6 border-2 border-[#00ff88]/30 border-t-[#00ff88] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#e50914]/30 border-t-[#e50914] rounded-full animate-spin" />
             Loading voices...
           </div>
         </div>
@@ -243,9 +243,9 @@ export default function VoiceSelectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden pt-16">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,255,136,0.08),transparent_50%)]" />
+    <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
+      {/* Netflix Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
@@ -255,7 +255,7 @@ export default function VoiceSelectPage() {
               Select Voice
             </h1>
             <p className="text-sm sm:text-base text-white/60">
-              <span className="text-[#00ff88] font-medium">{filteredVoices.length}</span> of {voices.length} voices
+              <span className="text-[#e50914] font-medium">{filteredVoices.length}</span> of {voices.length} voices
             </p>
           </div>
           <Button
@@ -285,7 +285,7 @@ export default function VoiceSelectPage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-semibold text-sm sm:text-base transition-all whitespace-nowrap ${
                     isActive
-                      ? "bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black shadow-lg shadow-[#00ff88]/25"
+                      ? "bg-[#e50914] text-white shadow-lg"
                       : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
                   }`}
                 >
@@ -325,7 +325,7 @@ export default function VoiceSelectPage() {
               onClick={() => setShowFilters(!showFilters)}
               className={`border-2 h-11 rounded-xl font-semibold transition-all ${
                 showFilters || hasActiveFilters
-                  ? "border-[#00ff88] text-[#00ff88] bg-[#00ff88]/10"
+                  ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
                   : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
               }`}
             >
@@ -339,7 +339,7 @@ export default function VoiceSelectPage() {
               onClick={() => setShowSettings(!showSettings)}
               className={`border-2 h-11 rounded-xl font-semibold transition-all ${
                 showSettings
-                  ? "border-[#00d4ff] text-[#00d4ff] bg-[#00d4ff]/10"
+                  ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
                   : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
               }`}
             >
@@ -754,7 +754,7 @@ export default function VoiceSelectPage() {
                   size="lg"
                   disabled={!selectedVoice}
                   onClick={handleContinue}
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 h-14 px-12 rounded-xl font-bold text-lg shadow-lg shadow-[#00ff88]/25 transition-all hover:-translate-y-0.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto netflix-button netflix-button-primary h-14 px-12 rounded-xl font-bold text-lg shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Continue to Generation →
                 </Button>

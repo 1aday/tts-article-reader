@@ -434,9 +434,9 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center pt-16">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.08),transparent_50%)]" />
+    <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center pt-16">
+      {/* Netflix Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.15),transparent_70%)]" />
 
       <div className="relative max-w-3xl w-full px-4 sm:px-6">
         <div className="bg-black/40 backdrop-blur-sm border border-gray-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12">

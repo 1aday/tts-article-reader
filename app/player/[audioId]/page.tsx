@@ -383,11 +383,11 @@ export default function PlayerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.08),transparent_50%)]" />
+      <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.15),transparent_70%)]" />
         <div className="relative">
           <div className="flex items-center gap-3 text-xl text-gray-400">
-            <div className="w-6 h-6 border-2 border-[#00ff88]/30 border-t-[#00ff88] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#e50914]/30 border-t-[#e50914] rounded-full animate-spin" />
             Loading audio...
           </div>
         </div>
@@ -397,15 +397,15 @@ export default function PlayerPage() {
 
   if (!audioUrl) {
     return (
-      <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.08),transparent_50%)]" />
+      <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.15),transparent_70%)]" />
         <div className="relative">
           <div className="bg-black/40 backdrop-blur-sm border border-gray-900 rounded-3xl p-12">
             <div className="text-center space-y-6">
               <div className="text-2xl text-gray-400">Audio not found</div>
               <Button
                 onClick={() => router.push("/")}
-                className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black hover:opacity-90 h-12 px-8 rounded-2xl font-semibold"
+                className="netflix-button netflix-button-primary h-12 px-8 rounded-2xl font-semibold"
               >
                 <Home className="w-4 h-4 mr-2" />
                 Go Home
@@ -418,10 +418,10 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden p-4 pt-16">
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,255,136,0.12),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,212,255,0.12),transparent_50%)]" />
+    <div className="min-h-screen bg-[#141414] relative overflow-hidden p-4 pt-16">
+      {/* Netflix Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(229,9,20,0.15),transparent_70%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
       {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
