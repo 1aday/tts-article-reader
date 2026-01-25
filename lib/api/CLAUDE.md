@@ -21,6 +21,13 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3138 | 4:49 PM | 🔵 | Current ElevenLabs Integration Uses Turbo v2.5 Model with 25K Character Chunking | ~677 |
+| #3126 | 4:48 PM | 🔵 | Desktop Project Uses ElevenLabs Turbo v2.5 Model, Not v3 | ~488 |
+| #3121 | " | 🔵 | ElevenLabs Integration Uses MP3 Format with Clean Voice Settings Filter | ~459 |
+| #3117 | " | 🔵 | AI-Powered Article Categorization with Dynamic Vocabulary Management | ~786 |
+| #3114 | 4:47 PM | 🔵 | Firecrawl Web Scraping Integration with Image Extraction | ~626 |
+| #3110 | " | 🔵 | OpenAI GPT-5-Nano Text Enhancement for TTS | ~528 |
+| #3109 | 4:46 PM | 🔵 | ElevenLabs TTS API Integration | ~530 |
 | #3068 | 4:39 PM | 🔵 | Categorization System Also Uses GPT-4o-mini with Temperature 0.3 | ~401 |
 | #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
 | #2920 | " | 🔵 | Firecrawl Integration Extracts Article Content and Featured Images | ~514 |

@@ -14,6 +14,8 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3138 | 4:49 PM | 🔵 | Current ElevenLabs Integration Uses Turbo v2.5 Model with 25K Character Chunking | ~677 |
+| #3127 | " | 🔵 | Audio Generation Pipeline with Text Enhancement, Chunking, and Parallel Processing | ~714 |
 | #2853 | 4:02 PM | 🔴 | Committed ElevenLabs Temperature Error Fix to Git | ~316 |
 | #2838 | 4:00 PM | 🔵 | Verified Complete Removal of style Parameter from Generation Route | ~281 |
 | #2837 | " | 🔴 | Removed style Parameter from Voice Settings Object Construction | ~279 |

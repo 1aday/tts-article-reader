@@ -13,6 +13,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3138 | 4:49 PM | 🔵 | Current ElevenLabs Integration Uses Turbo v2.5 Model with 25K Character Chunking | ~677 |
 | #3090 | 4:44 PM | 🔵 | Confirmation Dialog Component with Retro Terminal Styling | ~420 |
 | #2813 | 3:57 PM | 🔴 | Fixed Voice List Item Hover and Text Color Styling | ~336 |
 | #2812 | " | ✅ | Changed Search Input Background to Dark Hardcoded Color in Voice Selector | ~355 |

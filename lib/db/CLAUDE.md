@@ -14,6 +14,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3138 | 4:49 PM | 🔵 | Current ElevenLabs Integration Uses Turbo v2.5 Model with 25K Character Chunking | ~677 |
 | #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
 | #2919 | 4:20 PM | 🔵 | Database Schema Uses PostgreSQL with Comprehensive Article and Taxonomy Tables | ~485 |
 | #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |

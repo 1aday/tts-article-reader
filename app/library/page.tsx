@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Plus, Play, Download, Music, Calendar, Link as LinkIcon, Pause, SkipBack, SkipForward, Volume2, Maximize2, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Play, Download, Music, Calendar, Link as LinkIcon, Pause, SkipBack, SkipForward, Volume2, Maximize2, Loader2, Trash2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { FilterBar } from "@/components/library/FilterBar";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
@@ -26,6 +26,8 @@ interface Article {
   sourceType: string;
   sourceUrl: string | null;
   imageUrl: string | null;
+  generatedImageUrl: string | null;
+  imageGenerationStatus: string | null;
   categories: string[];
   tags: string[];
   categorizationStatus: string;
@@ -62,6 +64,10 @@ export default function LibraryPage() {
   // Image refresh state
   const [refreshingImageId, setRefreshingImageId] = useState<number | null>(null);
   const [bulkRefreshing, setBulkRefreshing] = useState(false);
+
+  // Image generation state
+  const [generatingImageId, setGeneratingImageId] = useState<number | null>(null);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
 
   useEffect(() => {
     fetchLibrary();
@@ -285,6 +291,86 @@ export default function LibraryPage() {
     }
   };
 
+  const handleGenerateImage = async (e: React.MouseEvent, articleId: number) => {
+    e.stopPropagation(); // Prevent card click
+    setGeneratingImageId(articleId);
+
+    try {
+      const response = await fetch("/api/article/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ articleId, regenerate: true }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate image");
+      }
+
+      // Update article in local state
+      setArticles((prev) =>
+        prev.map((article) =>
+          article.id === articleId
+            ? {
+                ...article,
+                generatedImageUrl: data.imageUrl,
+                imageGenerationStatus: "completed"
+              }
+            : article
+        )
+      );
+
+      toast.success("Image generated successfully!");
+    } catch (error) {
+      console.error("Generate image error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate image");
+    } finally {
+      setGeneratingImageId(null);
+    }
+  };
+
+  const handleBulkGenerateImages = async () => {
+    setBulkGenerating(true);
+    toast.loading("Generating AI images for all articles...", { id: "bulk-generate" });
+
+    try {
+      const response = await fetch("/api/article/bulk-generate-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ regenerate: false }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate images");
+      }
+
+      // Refresh the library to get updated articles
+      await fetchLibrary();
+
+      // Show results
+      const { results } = data;
+      const successMessage = `AI images generated! Created: ${results.generated}, Failed: ${results.failed}, Skipped: ${results.skipped}`;
+
+      toast.success(successMessage, { id: "bulk-generate", duration: 5000 });
+
+      if (results.errors && results.errors.length > 0) {
+        console.log("Bulk generation errors:", results.errors);
+      }
+    } catch (error) {
+      console.error("Bulk generate error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate images", { id: "bulk-generate" });
+    } finally {
+      setBulkGenerating(false);
+    }
+  };
+
   const handleDeleteClick = (e: React.MouseEvent, article: Article) => {
     e.stopPropagation(); // Prevent card click
     setArticleToDelete(article);
@@ -415,6 +501,17 @@ export default function LibraryPage() {
               </Button>
             )}
             <Button
+              onClick={handleBulkGenerateImages}
+              disabled={bulkGenerating}
+              size="lg"
+              className="bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 border border-[#a855f7]/30 font-semibold shadow-lg disabled:opacity-50"
+              title="Generate AI images for all articles"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${bulkGenerating ? "animate-spin" : ""}`} />
+              <span className="hidden lg:inline">Generate AI Images</span>
+              <span className="hidden sm:inline lg:hidden">AI Images</span>
+            </Button>
+            <Button
               size="lg"
               onClick={() => router.push("/")}
               className="bg-transparent text-white/70 hover:text-white hover:bg-white/10 border-0"
@@ -513,9 +610,9 @@ export default function LibraryPage() {
                 >
                   {/* Featured Image */}
                   <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20">
-                    {article.imageUrl ? (
+                    {(article.generatedImageUrl || article.imageUrl) ? (
                       <img
-                        src={article.imageUrl}
+                        src={article.generatedImageUrl || article.imageUrl || ''}
                         alt={article.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
@@ -557,6 +654,24 @@ export default function LibraryPage() {
                           <RefreshCw className={`w-5 h-5 ${refreshingImageId === article.id ? "animate-spin" : ""}`} />
                         </button>
                       )}
+
+                      {/* Generate AI Image Button */}
+                      <button
+                        onClick={(e) => handleGenerateImage(e, article.id)}
+                        disabled={generatingImageId === article.id || article.imageGenerationStatus === "generating"}
+                        className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110 ${
+                          !article.generatedImageUrl
+                            ? "bg-[#a855f7]/90 hover:bg-[#a855f7] opacity-100"
+                            : "bg-[#a855f7]/90 hover:bg-[#a855f7] opacity-0 group-hover:opacity-100"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={article.generatedImageUrl ? "Regenerate AI image" : "Generate AI image"}
+                      >
+                        {generatingImageId === article.id || article.imageGenerationStatus === "generating" ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
 
                     {/* Audio Status Badge */}

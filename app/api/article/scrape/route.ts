@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ articleId: article.id }),
     }).catch((err) => console.error("Failed to trigger categorization:", err));
 
+    // Trigger image generation (fire-and-forget)
+    fetch(`${baseUrl}/api/article/generate-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ articleId: article.id }),
+    }).catch((err) => console.error("Failed to trigger image generation:", err));
+
     return NextResponse.json(
       {
         success: true,

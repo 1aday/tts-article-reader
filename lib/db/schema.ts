@@ -10,6 +10,11 @@ export const articles = pgTable("articles", {
   sourceType: text("source_type").notNull(), // 'url' or 'paste'
   wordCount: integer("word_count").notNull(),
   imageUrl: text("image_url"), // Featured image (OG/meta)
+  generatedImageUrl: text("generated_image_url"), // AI-generated cover image (Vercel Blob)
+  generatedImagePrompt: text("generated_image_prompt"),
+  imageGenerationStatus: text("image_generation_status").default("pending"), // 'pending', 'generating', 'completed', 'failed'
+  imageGenerationError: text("image_generation_error"),
+  imageGeneratedAt: timestamp("image_generated_at"),
   metadata: text("metadata"), // JSON string
   categoriesJson: text("categories_json"), // Cached JSON array of category names
   tagsJson: text("tags_json"), // Cached JSON array of tag names

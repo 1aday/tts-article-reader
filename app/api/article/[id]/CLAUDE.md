@@ -7,5 +7,5 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #3123 | 4:48 PM | 🔵 | Voices API Implements Caching Strategy with ElevenLabs Integration | ~461 |
+| #3118 | 4:48 PM | 🔵 | Article Retrieval and Cascade Deletion API | ~467 |
 </claude-mem-context>

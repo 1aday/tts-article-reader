@@ -13,6 +13,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3104 | 4:45 PM | 🔵 | Library API for Article and Audio Retrieval | ~498 |
 | #2921 | 4:21 PM | 🔵 | Library Page Implementation Analysis Reveals Complete Data Flow and UI Patterns | ~549 |
 | #2915 | 4:20 PM | 🔵 | Library API Fetches All Articles with Audio Files, Categories, and Tags | ~482 |
 | #2914 | 4:18 PM | 🔵 | Database Schema Analysis Reveals Articles Table with imageUrl Field and Supporting Infrastructure | ~536 |

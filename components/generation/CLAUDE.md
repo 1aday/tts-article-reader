@@ -16,6 +16,8 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3126 | 4:48 PM | 🔵 | Desktop Project Uses ElevenLabs Turbo v2.5 Model, Not v3 | ~488 |
+| #3111 | 4:47 PM | 🔵 | Stage Details Card Component for Generation Progress | ~563 |
 | #3069 | 4:39 PM | ✅ | Updated UI to Display GPT-5 Nano in Generation Progress Card | ~322 |
 | #3067 | " | 🔵 | Stage Details Card Shows GPT-4o-mini Still Referenced in UI | ~350 |
 </claude-mem-context>
