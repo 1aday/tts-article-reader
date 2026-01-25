@@ -11,7 +11,7 @@ export async function GET() {
     const cachedVoices = await db
       .select()
       .from(voices)
-      .where(sql`${voices.lastFetched} > ${oneHourAgo.getTime() / 1000}`);
+      .where(sql`${voices.lastFetched} > ${oneHourAgo}`);
 
     // If we have cached voices, return them
     if (cachedVoices.length > 0) {
