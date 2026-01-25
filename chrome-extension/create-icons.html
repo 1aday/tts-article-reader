@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #0a0a0a;
+      color: white;
+    }
+    canvas {
+      border: 1px solid #333;
+      margin: 10px;
+    }
+    .icon-set {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Article to Audio Icons</h1>
+  <p>Right-click each canvas and "Save image as..." to create icon files</p>
+  <div class="icon-set" id="icons"></div>
+
+  <script>
+    const sizes = [16, 32, 48, 128];
+
+    sizes.forEach(size => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#00ff88');
+      gradient.addColorStop(1, '#00d4ff');
+
+      // Draw rounded rect background
+      const radius = size * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(size - radius, 0);
+      ctx.quadraticCurveTo(size, 0, size, radius);
+      ctx.lineTo(size, size - radius);
+      ctx.quadraticCurveTo(size, size, size - radius, size);
+      ctx.lineTo(radius, size);
+      ctx.quadraticCurveTo(0, size, 0, size - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Draw music note icon
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${size * 0.6}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🎵', size / 2, size / 2);
+
+      // Add to page
+      const container = document.createElement('div');
+      container.style.textAlign = 'center';
+
+      const label = document.createElement('div');
+      label.textContent = `icon-${size}.png`;
+      label.style.marginBottom = '5px';
+      label.style.fontSize = '12px';
+
+      container.appendChild(label);
+      container.appendChild(canvas);
+      document.getElementById('icons').appendChild(container);
+    });
+  </script>
+</body>
+</html>

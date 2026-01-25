@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TTS Article Reader
+
+Transform any article into natural-sounding audio with AI-powered text-to-speech.
+
+## Features
+
+- ✨ **Retro Terminal Aesthetic** - Phosphor green CRT-style interface
+- 📰 **Article Scraping** - Extract clean text from any URL using Firecrawl
+- 🤖 **AI Enhancement** - OpenAI optimizes text for natural speech
+- 🎙️ **Premium Voices** - Choose from 25+ ElevenLabs voices
+- 🎧 **Audio Playback** - Full-featured player with progress tracking
+- ⚡ **Real-time Progress** - SSE streaming for generation status
 
 ## Getting Started
 
-First, run the development server:
+### Installation
+
+```bash
+npm install
+```
+
+### Database Setup
+
+```bash
+npx drizzle-kit push
+```
+
+### Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Next.js 15 + TypeScript
+- shadcn/ui + Tailwind CSS
+- Drizzle ORM + SQLite
+- OpenAI, ElevenLabs, Firecrawl APIs
 
-## Learn More
+## User Flow
 
-To learn more about Next.js, take a look at the following resources:
+1. Landing → Terminal interface
+2. Create → Paste URL or text
+3. Voice Select → Choose voice with preview
+4. Generate → Real-time SSE progress
+5. Player → Play generated audio
+6. Library → Browse history
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Keys
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The `.env.local` file contains:
+- OPENAI_API_KEY
+- ELEVENLABS_API_KEY
+- FIRECRAWL_API_KEY
 
-## Deploy on Vercel
+## Rate Limits
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Scraping: 10/hour per IP
+- Generation: 5/hour per IP
+- Preview: 20/hour per IP
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Powered By
+
+- [Firecrawl](https://firecrawl.dev)
+- [OpenAI](https://openai.com)
+- [ElevenLabs](https://elevenlabs.io)
