@@ -20,7 +20,6 @@ export interface TTSOptions {
   voice_settings?: {
     stability?: number;
     similarity_boost?: number;
-    style?: number;
     use_speaker_boost?: boolean;
   };
   output_format?: string;
@@ -57,11 +56,22 @@ export async function generateSpeech(options: TTSOptions): Promise<Response> {
     voice_settings = {
       stability: 0.5,
       similarity_boost: 0.8,
-      style: 0.0,
       use_speaker_boost: true,
     },
     output_format = "mp3_44100_128",
   } = options;
+
+  // Filter voice_settings to only include supported parameters
+  // This prevents temperature-related errors caused by unsupported parameters
+  const cleanVoiceSettings: Record<string, any> = {
+    stability: voice_settings.stability ?? 0.5,
+    similarity_boost: voice_settings.similarity_boost ?? 0.8,
+  };
+
+  // Only add use_speaker_boost if provided
+  if (voice_settings.use_speaker_boost !== undefined) {
+    cleanVoiceSettings.use_speaker_boost = voice_settings.use_speaker_boost;
+  }
 
   const response = await fetch(
     `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
@@ -74,7 +84,7 @@ export async function generateSpeech(options: TTSOptions): Promise<Response> {
       body: JSON.stringify({
         text,
         model_id,
-        voice_settings,
+        voice_settings: cleanVoiceSettings,
         output_format,
       }),
     }

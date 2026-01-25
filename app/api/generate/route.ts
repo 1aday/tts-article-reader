@@ -15,7 +15,6 @@ const generateSchema = z.object({
   // Audio generation settings
   stability: z.number().min(0).max(1).optional().default(0.5),
   similarityBoost: z.number().min(0).max(1).optional().default(0.75),
-  style: z.number().min(0).max(1).optional().default(0),
   useSpeakerBoost: z.boolean().optional().default(true),
 });
 
@@ -58,7 +57,6 @@ export async function POST(request: NextRequest) {
       skipEnhancement,
       stability,
       similarityBoost,
-      style,
       useSpeakerBoost,
     } = validation.data;
 
@@ -66,7 +64,6 @@ export async function POST(request: NextRequest) {
     const voiceSettings = {
       stability,
       similarity_boost: similarityBoost,
-      style,
       use_speaker_boost: useSpeakerBoost,
     };
 
