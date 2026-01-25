@@ -32,6 +32,7 @@ export async function uploadAudio(
       const blob = await put(filename, buffer, {
         access: "public",
         addRandomSuffix: false,
+        contentType: "audio/mpeg", // Essential for browser playback
       });
 
       console.log("[Blob Storage] Upload successful:", blob.url);

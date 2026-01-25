@@ -7,6 +7,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3088 | 4:44 PM | 🔵 | Text Enhancement API with Server-Sent Events Streaming | ~452 |
 | #2728 | 3:23 PM | 🔵 | Desktop Enhancement API Requires Article ID Instead of Direct Text | ~382 |
 | #2695 | 12:25 AM | 🔵 | Found older enhance route version in tts-article-reader directory without progress tracking enhancements | ~680 |
 </claude-mem-context>

@@ -13,6 +13,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #3090 | 4:44 PM | 🔵 | Confirmation Dialog Component with Retro Terminal Styling | ~420 |
 | #2813 | 3:57 PM | 🔴 | Fixed Voice List Item Hover and Text Color Styling | ~336 |
 | #2812 | " | ✅ | Changed Search Input Background to Dark Hardcoded Color in Voice Selector | ~355 |
 | #2811 | " | 🔴 | Fixed Secondary Text Visibility in Voice Selector | ~364 |
