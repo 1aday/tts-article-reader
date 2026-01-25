@@ -1,8 +1,8 @@
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, real, index, serial, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const articles = sqliteTable("articles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const articles = pgTable("articles", {
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
   originalText: text("original_text").notNull(),
   enhancedText: text("enhanced_text"),
@@ -15,18 +15,14 @@ export const articles = sqliteTable("articles", {
   tagsJson: text("tags_json"), // Cached JSON array of tag names
   categorizationStatus: text("categorization_status").default("pending"), // 'pending', 'processing', 'completed', 'failed'
   categorizationError: text("categorization_error"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
   createdAtIdx: index("articles_created_at_idx").on(table.createdAt),
 }));
 
-export const audioFiles = sqliteTable("audio_files", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const audioFiles = pgTable("audio_files", {
+  id: serial("id").primaryKey(),
   articleId: integer("article_id")
     .notNull()
     .references(() => articles.id, { onDelete: "cascade" }),
@@ -37,31 +33,25 @@ export const audioFiles = sqliteTable("audio_files", {
   fileSize: integer("file_size"), // in bytes
   status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed', 'failed'
   errorMessage: text("error_message"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
   articleIdIdx: index("audio_files_article_id_idx").on(table.articleId),
   statusIdx: index("audio_files_status_idx").on(table.status),
 }));
 
-export const voices = sqliteTable("voices", {
+export const voices = pgTable("voices", {
   id: text("id").primaryKey(), // ElevenLabs voice ID
   name: text("name").notNull(),
   category: text("category"),
   previewUrl: text("preview_url"),
   labels: text("labels"), // JSON string array
-  isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
-  lastFetched: integer("last_fetched", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  isFavorite: integer("is_favorite").notNull().default(0),
+  lastFetched: timestamp("last_fetched").notNull().defaultNow(),
 });
 
-export const processingJobs = sqliteTable("processing_jobs", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const processingJobs = pgTable("processing_jobs", {
+  id: serial("id").primaryKey(),
   articleId: integer("article_id")
     .notNull()
     .references(() => articles.id, { onDelete: "cascade" }),
@@ -70,69 +60,57 @@ export const processingJobs = sqliteTable("processing_jobs", {
   progress: integer("progress").notNull().default(0), // 0-100
   currentStep: text("current_step"),
   errorMessage: text("error_message"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
   statusIdx: index("processing_jobs_status_idx").on(table.status),
 }));
 
-export const categories = sqliteTable("categories", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
   usageCount: integer("usage_count").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   usageCountIdx: index("categories_usage_count_idx").on(table.usageCount),
   nameIdx: index("categories_name_idx").on(table.name),
 }));
 
-export const tags = sqliteTable("tags", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const tags = pgTable("tags", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
   usageCount: integer("usage_count").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   usageCountIdx: index("tags_usage_count_idx").on(table.usageCount),
   nameIdx: index("tags_name_idx").on(table.name),
 }));
 
-export const articleCategories = sqliteTable("article_categories", {
+export const articleCategories = pgTable("article_categories", {
   articleId: integer("article_id")
     .notNull()
     .references(() => articles.id, { onDelete: "cascade" }),
   categoryId: integer("category_id")
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   pk: index("article_categories_pk").on(table.articleId, table.categoryId),
   articleIdx: index("article_categories_article_idx").on(table.articleId),
   categoryIdx: index("article_categories_category_idx").on(table.categoryId),
 }));
 
-export const articleTags = sqliteTable("article_tags", {
+export const articleTags = pgTable("article_tags", {
   articleId: integer("article_id")
     .notNull()
     .references(() => articles.id, { onDelete: "cascade" }),
   tagId: integer("tag_id")
     .notNull()
     .references(() => tags.id, { onDelete: "cascade" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   pk: index("article_tags_pk").on(table.articleId, table.tagId),
   articleIdx: index("article_tags_article_idx").on(table.articleId),

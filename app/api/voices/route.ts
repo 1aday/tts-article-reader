@@ -43,7 +43,7 @@ export async function GET() {
           category: voice.category || null,
           previewUrl: voice.preview_url || null,
           labels: voice.labels ? JSON.stringify(voice.labels) : null,
-          isFavorite: false,
+          isFavorite: 0,
           lastFetched: now,
         })
         .onConflictDoUpdate({

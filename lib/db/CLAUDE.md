@@ -14,5 +14,11 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2771 | 3:29 PM | 🔴 | Database Schema Migration from SQLite to PostgreSQL Completed | ~447 |
+| #2770 | " | 🔴 | Article Categories Table Migrated from SQLite to PostgreSQL Schema | ~438 |
+| #2769 | 3:28 PM | 🔄 | Tags Table Schema Migrated from SQLite to PostgreSQL | ~419 |
+| #2767 | " | ✅ | Categories Table Schema Migrated from SQLite to PostgreSQL | ~369 |
+| #2766 | " | 🔄 | Processing Jobs Table Migrated from SQLite to PostgreSQL Schema | ~458 |
+| #2765 | " | 🔄 | Voices Table Migration from SQLite to PostgreSQL Schema | ~437 |
 | #2701 | 12:32 AM | 🔄 | Database Client Migrated from SQLite to Vercel Postgres | ~397 |
 </claude-mem-context>

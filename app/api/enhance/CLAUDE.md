@@ -7,5 +7,6 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2728 | 3:23 PM | 🔵 | Desktop Enhancement API Requires Article ID Instead of Direct Text | ~382 |
 | #2695 | 12:25 AM | 🔵 | Found older enhance route version in tts-article-reader directory without progress tracking enhancements | ~680 |
 </claude-mem-context>
