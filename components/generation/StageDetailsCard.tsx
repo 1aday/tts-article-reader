@@ -38,13 +38,13 @@ export function StageDetailsCard({
   const getStageIcon = () => {
     switch (currentStage) {
       case "enhance":
-        return <Sparkles className="w-5 h-5 text-[#00ff88]" />;
+        return <Sparkles className="w-5 h-5 text-[#e50914]" />;
       case "generate":
-        return <Volume2 className="w-5 h-5 text-[#00d4ff]" />;
+        return <Volume2 className="w-5 h-5 text-[#e50914]" />;
       case "upload":
         return <Upload className="w-5 h-5 text-[#a855f7]" />;
       case "complete":
-        return <CheckCircle className="w-5 h-5 text-[#00ff88]" />;
+        return <CheckCircle className="w-5 h-5 text-[#e50914]" />;
     }
   };
 
@@ -52,7 +52,7 @@ export function StageDetailsCard({
     <div className="bg-gradient-to-br from-surface-1 to-surface-2 border-2 border-white/10 rounded-2xl p-8 mb-8 shadow-2xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-[#00ff88]/20 to-[#00d4ff]/20 border border-[#00ff88]/30">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-[#e50914]/20 to-[#e50914]/20 border border-[#e50914]/30">
           {getStageIcon()}
         </div>
         <div className="flex-1">
@@ -73,7 +73,7 @@ export function StageDetailsCard({
       {/* Progress Bar */}
       <div className="relative h-3 bg-surface-3 rounded-full overflow-hidden mb-6">
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] rounded-full transition-all duration-500 ease-out"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#e50914] to-[#e50914] rounded-full transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-shimmer" />
@@ -133,7 +133,7 @@ export function StageDetailsCard({
                 <div className="flex items-center gap-1 mt-1">
                   <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#00ff88] to-[#00d4ff]"
+                      className="h-full bg-gradient-to-r from-[#e50914] to-[#e50914]"
                       style={{ width: `${((completedChunks || 0) / totalChunks) * 100}%` }}
                     />
                   </div>
@@ -181,7 +181,7 @@ function DetailItem({
 }) {
   return (
     <div className="flex items-start gap-3 p-4 rounded-xl bg-surface-3/50 border border-white/5">
-      <div className="p-2 rounded-lg bg-gradient-to-br from-[#00ff88]/10 to-[#00d4ff]/10 text-[#00ff88]">
+      <div className="p-2 rounded-lg bg-gradient-to-br from-[#e50914]/10 to-[#e50914]/10 text-[#e50914]">
         {icon}
       </div>
       <div className="flex-1 min-w-0">

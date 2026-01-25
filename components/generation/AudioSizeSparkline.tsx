@@ -18,7 +18,7 @@ export function AudioSizeSparkline({
     <div className="bg-surface-2 border-2 border-white/10 rounded-xl p-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <HardDrive className="w-5 h-5 text-[#00d4ff]" />
+          <HardDrive className="w-5 h-5 text-[#e50914]" />
           <span className="text-sm font-semibold text-white">Audio File Size</span>
         </div>
         <div className="text-2xl font-bold gradient-terminal">
@@ -37,8 +37,8 @@ export function AudioSizeSparkline({
               key={idx}
               className={`flex-1 rounded-t transition-all duration-300 ${
                 isLast
-                  ? "bg-gradient-to-t from-[#00ff88] to-[#00d4ff] animate-pulse"
-                  : "bg-gradient-to-t from-[#00ff88]/60 to-[#00d4ff]/60"
+                  ? "bg-gradient-to-t from-[#e50914] to-[#e50914] animate-pulse"
+                  : "bg-gradient-to-t from-[#e50914]/60 to-[#e50914]/60"
               }`}
               style={{ height: `${height}%` }}
             />
@@ -59,7 +59,7 @@ export function AudioSizeSparkline({
       {/* Size labels */}
       <div className="flex items-center justify-between mt-3 text-xs text-white/50">
         <span>0 MB</span>
-        <span className="text-[#00d4ff]">~{estimatedTotal.toFixed(1)} MB estimated</span>
+        <span className="text-[#e50914]">~{estimatedTotal.toFixed(1)} MB estimated</span>
       </div>
     </div>
   );

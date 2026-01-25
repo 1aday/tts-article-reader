@@ -132,8 +132,8 @@ function StatRow({
   color?: "green" | "cyan" | "purple" | "gray";
 }) {
   const colorMap = {
-    green: "from-[#00ff88] to-[#00d4ff]",
-    cyan: "from-[#00d4ff] to-[#a855f7]",
+    green: "from-[#e50914] to-[#e50914]",
+    cyan: "from-[#e50914] to-[#a855f7]",
     purple: "from-[#a855f7] to-[#ff00ff]",
     gray: "from-white/20 to-white/10"
   };

@@ -33,11 +33,11 @@ export function TimeMetricsCards({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
       {/* Elapsed Time Card */}
-      <div className="bg-surface-2 border-2 border-[#00ff88]/20 rounded-xl p-6 relative overflow-hidden group hover:border-[#00ff88]/40 transition-colors">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00ff88]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="bg-surface-2 border-2 border-[#e50914]/20 rounded-xl p-6 relative overflow-hidden group hover:border-[#e50914]/40 transition-colors">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#e50914]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-[#00ff88]" />
+            <Clock className="w-4 h-4 text-[#e50914]" />
             <span className="text-xs text-white/60 uppercase tracking-wide">Elapsed</span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
@@ -50,11 +50,11 @@ export function TimeMetricsCards({
       </div>
 
       {/* Estimated Remaining Card */}
-      <div className="bg-surface-2 border-2 border-[#00d4ff]/20 rounded-xl p-6 relative overflow-hidden group hover:border-[#00d4ff]/40 transition-colors">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00d4ff]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="bg-surface-2 border-2 border-[#e50914]/20 rounded-xl p-6 relative overflow-hidden group hover:border-[#e50914]/40 transition-colors">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#e50914]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <Timer className="w-4 h-4 text-[#00d4ff]" />
+            <Timer className="w-4 h-4 text-[#e50914]" />
             <span className="text-xs text-white/60 uppercase tracking-wide">Remaining</span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
