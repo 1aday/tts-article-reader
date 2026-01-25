@@ -6,6 +6,8 @@ import { FeaturedArticleHero } from '@/components/home/FeaturedArticleHero';
 import { ArticleCarousel } from '@/components/home/ArticleCarousel';
 import { Button } from '@/components/ui/button';
 import { Article, AudioFile } from '@/lib/db/schema';
+import { Plus, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ArticleWithAudio = Article & {
   audioFiles?: AudioFile[];
@@ -15,6 +17,7 @@ export default function Home() {
   const [articles, setArticles] = useState<ArticleWithAudio[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingImages, setGeneratingImages] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -29,6 +32,16 @@ export default function Home() {
 
         if (articlesData.success) {
           setArticles(articlesData.articles);
+
+          // Auto-generate images for articles without them
+          const needsImages = articlesData.articles.filter((a: any) =>
+            !a.generatedImageUrl &&
+            (!a.imageGenerationStatus || a.imageGenerationStatus === 'pending' || a.imageGenerationStatus === 'failed')
+          );
+
+          if (needsImages.length > 0) {
+            generateMissingImages();
+          }
         }
 
         if (filtersData.success) {
@@ -43,6 +56,42 @@ export default function Home() {
 
     fetchData();
   }, []);
+
+  const generateMissingImages = async () => {
+    if (generatingImages) return;
+
+    setGeneratingImages(true);
+    toast.loading('Generating AI images for your articles...', { id: 'bulk-gen' });
+
+    try {
+      const response = await fetch('/api/article/bulk-generate-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regenerate: false })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(
+          `Generated ${data.results.generated} images!`,
+          { id: 'bulk-gen', duration: 5000 }
+        );
+
+        // Refresh articles after generation
+        const articlesRes = await fetch('/api/library');
+        const articlesData = await articlesRes.json();
+        if (articlesData.success) {
+          setArticles(articlesData.articles);
+        }
+      }
+    } catch (error) {
+      console.error('Bulk generation error:', error);
+      toast.error('Failed to generate images', { id: 'bulk-gen' });
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,6 +147,33 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black pb-12">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        {/* Add Article Button */}
+        <Link href="/create">
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold shadow-2xl shadow-[#00ff88]/50 hover:shadow-[#00ff88]/70 transition-all rounded-full w-14 h-14 p-0"
+            title="Add new article"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </Link>
+
+        {/* Generate Images Button */}
+        {articles.length > 0 && (
+          <Button
+            size="lg"
+            onClick={generateMissingImages}
+            disabled={generatingImages}
+            className="bg-[#a855f7] hover:bg-[#a855f7]/90 text-white font-semibold shadow-2xl shadow-[#a855f7]/50 hover:shadow-[#a855f7]/70 transition-all rounded-full w-14 h-14 p-0 disabled:opacity-50"
+            title="Generate AI images"
+          >
+            <Sparkles className={`w-6 h-6 ${generatingImages ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
+      </div>
+
       {/* Featured Hero */}
       <FeaturedArticleHero article={featuredArticle} />
 
