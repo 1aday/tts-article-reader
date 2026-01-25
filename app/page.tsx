@@ -66,7 +66,7 @@ export default function Home() {
           console.log('[Home] Articles needing images:', needsImages.length);
 
           if (needsImages.length > 0) {
-            generateMissingImages();
+            generateMissingImages(false); // Auto-generate only missing
           }
         }
 
@@ -88,17 +88,20 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const generateMissingImages = async () => {
+  const generateMissingImages = async (regenerate: boolean = false) => {
     if (generatingImages) return;
 
     setGeneratingImages(true);
-    toast.loading('Generating AI images for your articles...', { id: 'bulk-gen' });
+    const message = regenerate
+      ? 'Regenerating AI images for all articles...'
+      : 'Generating AI images for articles without images...';
+    toast.loading(message, { id: 'bulk-gen' });
 
     try {
       const response = await fetch('/api/article/bulk-generate-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ regenerate: false })
+        body: JSON.stringify({ regenerate })
       });
 
       const data = await response.json();
@@ -213,10 +216,10 @@ export default function Home() {
         {articles.length > 0 && (
           <Button
             size="lg"
-            onClick={generateMissingImages}
+            onClick={() => generateMissingImages(true)} // Regenerate ALL when clicked manually
             disabled={generatingImages}
             className="bg-[#a855f7] hover:bg-[#a855f7]/90 text-white font-semibold shadow-2xl shadow-[#a855f7]/50 hover:shadow-[#a855f7]/70 transition-all rounded-full w-14 h-14 p-0 disabled:opacity-50"
-            title="Generate AI images"
+            title="Regenerate all AI images"
           >
             <Sparkles className={`w-6 h-6 ${generatingImages ? 'animate-spin' : ''}`} />
           </Button>
