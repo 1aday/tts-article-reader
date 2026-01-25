@@ -122,19 +122,33 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
   });
 
   // Step 5: Upload to Vercel Blob for persistence
-  if (isProduction) {
+  try {
     const filename = `generated-${Date.now()}.${outputFormat}`;
+
+    console.log("[Replicate] Attempting Vercel Blob upload:", {
+      filename,
+      size: imageBuffer.length,
+      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+      isProduction
+    });
+
     const blob = await put(filename, imageBuffer, {
       access: "public",
       addRandomSuffix: false,
       contentType: `image/${outputFormat}`
     });
 
-    console.log("[Replicate] Uploaded to Vercel Blob:", blob.url);
+    console.log("[Replicate] Successfully uploaded to Vercel Blob:", blob.url);
     return blob.url;
-  } else {
-    // Development: Return original Replicate URL (temporary, but OK for dev)
-    console.log("[Replicate] Development mode: Using Replicate URL");
+  } catch (blobError) {
+    console.error("[Replicate] Vercel Blob upload failed:", {
+      error: blobError instanceof Error ? blobError.message : String(blobError),
+      isProduction,
+      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+    });
+
+    // Fallback to Replicate URL (temporary, will expire)
+    console.log("[Replicate] Falling back to temporary Replicate URL");
     return imageUrl;
   }
 }

@@ -72,22 +72,40 @@ export default function Home() {
 
       const data = await response.json();
 
+      console.log('[Home] Bulk generation result:', data);
+
       if (data.success) {
-        toast.success(
-          `Generated ${data.results.generated} images!`,
-          { id: 'bulk-gen', duration: 5000 }
-        );
+        const { results } = data;
+
+        if (results.generated > 0 || results.failed > 0) {
+          const message = `Generated: ${results.generated}, Failed: ${results.failed}, Skipped: ${results.skipped}`;
+
+          if (results.failed > 0) {
+            toast.warning(message, { id: 'bulk-gen', duration: 7000 });
+            console.error('[Home] Generation errors:', results.errors);
+          } else {
+            toast.success(message, { id: 'bulk-gen', duration: 5000 });
+          }
+        } else {
+          toast.info('All images already generated!', { id: 'bulk-gen' });
+        }
 
         // Refresh articles after generation
         const articlesRes = await fetch('/api/library');
         const articlesData = await articlesRes.json();
         if (articlesData.success) {
           setArticles(articlesData.articles);
+          console.log('[Home] Articles refreshed after generation');
         }
+      } else {
+        throw new Error(data.error || 'Generation failed');
       }
     } catch (error) {
-      console.error('Bulk generation error:', error);
-      toast.error('Failed to generate images', { id: 'bulk-gen' });
+      console.error('[Home] Bulk generation error:', error);
+      toast.error(
+        `Failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { id: 'bulk-gen' }
+      );
     } finally {
       setGeneratingImages(false);
     }

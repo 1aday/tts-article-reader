@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { articles } from "@/lib/db/schema";
 import { eq, or, isNull, inArray } from "drizzle-orm";
+import { generateImage } from "@/lib/api/replicate";
+import { buildImagePrompt } from "@/lib/utils/image-generation";
 
 export const maxDuration = 300; // 5 minutes
 
@@ -45,38 +47,75 @@ export async function POST(req: NextRequest) {
       try {
         // Skip if already has image and not regenerating
         if (article.generatedImageUrl && !regenerate) {
+          console.log(`[Bulk] Skipping article ${article.id} - already has image`);
           results.skipped++;
           continue;
         }
 
-        // Call single generation endpoint
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/article/generate-image`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              articleId: article.id,
-              regenerate
-            })
-          }
-        );
+        console.log(`[Bulk] Generating image for article ${article.id}: ${article.title}`);
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.skipped) {
-            results.skipped++;
-          } else {
-            results.generated++;
-          }
-        } else {
-          const errorData = await response.json();
+        // Update status to generating
+        await db
+          .update(articles)
+          .set({
+            imageGenerationStatus: "generating",
+            imageGenerationError: null
+          })
+          .where(eq(articles.id, article.id));
+
+        try {
+          // Parse categories
+          const categories = article.categoriesJson
+            ? JSON.parse(article.categoriesJson)
+            : [];
+
+          // Build prompt
+          const prompt = buildImagePrompt({
+            title: article.title,
+            categories,
+            summary: article.originalText?.slice(0, 300) || article.title
+          });
+
+          // Generate image
+          const imageUrl = await generateImage({
+            prompt,
+            aspectRatio: "3:4",
+            resolution: "2K",
+            outputFormat: "jpg"
+          });
+
+          // Update article with generated image
+          await db
+            .update(articles)
+            .set({
+              generatedImageUrl: imageUrl,
+              generatedImagePrompt: prompt,
+              imageGenerationStatus: "completed",
+              imageGeneratedAt: new Date(),
+              imageGenerationError: null
+            })
+            .where(eq(articles.id, article.id));
+
+          console.log(`[Bulk] Success for article ${article.id}:`, imageUrl);
+          results.generated++;
+
+        } catch (genError) {
+          const errorMessage = genError instanceof Error ? genError.message : String(genError);
+
+          // Update status to failed
+          await db
+            .update(articles)
+            .set({
+              imageGenerationStatus: "failed",
+              imageGenerationError: errorMessage
+            })
+            .where(eq(articles.id, article.id));
+
+          console.error(`[Bulk] Failed for article ${article.id}:`, errorMessage);
           results.failed++;
           results.errors.push({
             articleId: article.id,
-            error: errorData.error || "Unknown error"
+            error: errorMessage
           });
         }
 
@@ -84,10 +123,12 @@ export async function POST(req: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Bulk] Unexpected error for article ${article.id}:`, errorMessage);
         results.failed++;
         results.errors.push({
           articleId: article.id,
-          error: error instanceof Error ? error.message : String(error)
+          error: errorMessage
         });
       }
     }
