@@ -1,69 +1,39 @@
 # TTS Article Reader
 
-Transform any article into natural-sounding audio with AI-powered text-to-speech.
+Converts articles into natural-sounding audio using AI text-to-speech with a retro terminal aesthetic.
 
-## Features
+## What it does
 
-- ✨ **Retro Terminal Aesthetic** - Phosphor green CRT-style interface
-- 📰 **Article Scraping** - Extract clean text from any URL using Firecrawl
-- 🤖 **AI Enhancement** - OpenAI optimizes text for natural speech
-- 🎙️ **Premium Voices** - Choose from 25+ ElevenLabs voices
-- 🎧 **Audio Playback** - Full-featured player with progress tracking
-- ⚡ **Real-time Progress** - SSE streaming for generation status
-
-## Getting Started
-
-### Installation
-
-```bash
-npm install
-```
-
-### Database Setup
-
-```bash
-npx drizzle-kit push
-```
-
-### Run Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000)
+TTS Article Reader scrapes any article URL using Firecrawl, processes the content with OpenAI, and converts it into natural-sounding audio via ElevenLabs text-to-speech. Features a distinctive retro terminal-inspired UI that makes the reading and listening experience uniquely engaging. All articles and audio files are persisted locally using Drizzle ORM with SQLite for offline access.
 
 ## Tech Stack
 
-- Next.js 15 + TypeScript
-- shadcn/ui + Tailwind CSS
-- Drizzle ORM + SQLite
-- OpenAI, ElevenLabs, Firecrawl APIs
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **OpenAI** - Content processing and summarization
+- **ElevenLabs** - High-quality text-to-speech
+- **Firecrawl** - Web scraping and article extraction
+- **Drizzle ORM** - TypeScript ORM for database access
+- **SQLite** - Local persistent storage
 
-## User Flow
+## Getting Started
 
-1. Landing → Terminal interface
-2. Create → Paste URL or text
-3. Voice Select → Choose voice with preview
-4. Generate → Real-time SSE progress
-5. Player → Play generated audio
-6. Library → Browse history
+```bash
+git clone https://github.com/1aday/tts-article-reader.git
+cd tts-article-reader
+npm install
+npm run dev
+```
 
-## API Keys
+## Environment Variables
 
-The `.env.local` file contains:
-- OPENAI_API_KEY
-- ELEVENLABS_API_KEY
-- FIRECRAWL_API_KEY
+Create a `.env.local` file with the following:
 
-## Rate Limits
+```
+OPENAI_API_KEY=your_openai_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+FIRECRAWL_API_KEY=your_firecrawl_api_key
+```
 
-- Scraping: 10/hour per IP
-- Generation: 5/hour per IP
-- Preview: 20/hour per IP
-
-## Powered By
-
-- [Firecrawl](https://firecrawl.dev)
-- [OpenAI](https://openai.com)
-- [ElevenLabs](https://elevenlabs.io)
+---
+*Built by [@1aday](https://github.com/1aday)*
