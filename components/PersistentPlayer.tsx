@@ -51,12 +51,12 @@ export function PersistentPlayer() {
     return formatDuration(seconds);
   };
 
-  const effectiveDuration = Math.max(duration, currentTime);
+  const effectiveDuration = duration > 0 ? duration : currentTime;
   const progress = effectiveDuration > 0 ? Math.min(100, Math.max(0, (currentTime / effectiveDuration) * 100)) : 0;
   const remaining = Math.max(0, effectiveDuration - currentTime);
 
   const skipTime = (seconds: number) => {
-    const upperBound = Math.max(effectiveDuration, currentTime + Math.max(seconds, 0));
+    const upperBound = effectiveDuration > 0 ? effectiveDuration : currentTime;
     const newTime = Math.max(0, Math.min(upperBound, currentTime + seconds));
     seek(newTime);
   };

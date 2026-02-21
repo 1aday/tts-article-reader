@@ -551,7 +551,7 @@ export default function PlayerPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [audioData?.duration, duration, muted, playbackRate, volume]);
+  }, [audioData?.duration, audioData?.id, audioId, duration, muted, playbackRate, volume]);
 
   const setupVisualizer = async () => {
     if (useMobileVisualizerFallback || !audioRef.current || !canvasRef.current) return;
