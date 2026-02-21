@@ -1,13 +1,27 @@
 import type { Metadata } from "next";
+import { Bebas_Neue, Manrope } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Navigation } from "@/components/navigation";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { PersistentPlayer } from "@/components/PersistentPlayer";
 
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const bebasNeue = Bebas_Neue({
+  subsets: ["latin"],
+  variable: "--font-bebas-neue",
+  weight: "400",
+});
+
 export const metadata: Metadata = {
-  title: "TTS Reader - Transform Articles into Audio",
-  description: "Convert any article into natural-sounding audio with AI-powered text-to-speech. Powered by Firecrawl, OpenAI, and ElevenLabs.",
+  title: "TTS Reader",
+  description:
+    "Convert any article into cinematic, natural-sounding audio with AI voice generation.",
 };
 
 export default function RootLayout({
@@ -17,12 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="antialiased pb-24">
+      <body
+        className={`${manrope.variable} ${bebasNeue.variable} antialiased pb-24`}
+      >
         <PlayerProvider>
           <Navigation />
           {children}

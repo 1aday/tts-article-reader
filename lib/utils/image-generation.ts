@@ -38,6 +38,71 @@ function extractKeySubject(title: string): string {
     .join(' ');
 }
 
+function toTitleCase(input: string): string {
+  return input
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function stableHash(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function buildCatchyHeadline(title: string, category: string): string {
+  const tokens = title
+    .replace(/[-|:]/g, " ")
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 2);
+
+  const stopWords = new Set([
+    "the", "and", "for", "with", "from", "that", "this", "into", "after", "over", "under",
+    "inside", "about", "their", "there", "where", "when", "what", "how", "why", "article",
+    "times", "york", "new"
+  ]);
+
+  const coreWords = tokens.filter((word) => !stopWords.has(word.toLowerCase()));
+  const core = toTitleCase(coreWords.slice(0, 3).join(" "));
+
+  const templatesByCategory: Record<string, string[]> = {
+    Technology: ["Code Red: {core}", "Inside {core}", "{core} Rewired"],
+    News: ["Inside The Shift", "{core} Under Fire", "Breaking: {core}"],
+    Politics: ["Power Play: {core}", "Inside The Standoff", "{core} Under Pressure"],
+    Business: ["Market Shock: {core}", "The {core} Playbook", "{core} At Stake"],
+    Science: ["The {core} Breakthrough", "Inside {core}", "{core} Unlocked"],
+    Entertainment: ["Spotlight: {core}", "{core} After Dark", "{core} Unscripted"],
+    default: ["Inside {core}", "{core} Under Pressure", "The {core} Story"]
+  };
+
+  const templates = templatesByCategory[category] || templatesByCategory.default;
+  const template = templates[stableHash(title) % templates.length];
+  const fallback = core || "Inside The Story";
+  const headline = template.replace("{core}", fallback);
+
+  // Keep title short and punchy for small-screen readability.
+  return headline.length > 34 ? headline.slice(0, 31).trimEnd() + "..." : headline;
+}
+
+function buildMobileKicker(keySubject: string): string {
+  const short = keySubject
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" ");
+
+  const fallback = short || "Special Report";
+  const kicker = toTitleCase(fallback);
+  return kicker.length > 20 ? kicker.slice(0, 17).trimEnd() + "..." : kicker;
+}
+
 /**
  * Get category-specific style guide for Nano Banana Pro
  * Each category gets a unique visual treatment optimized for content expression
@@ -151,7 +216,19 @@ export function buildImagePrompt(article: {
 
   // Determine visual style based on category
   const category = article.categories[0] || 'default';
+  const coverHeadline = buildCatchyHeadline(article.title, category);
+  const coverKicker = buildMobileKicker(keySubject);
   const styleGuide = getCategoryStyleGuide(category);
+
+  const cinematicDirection = `
+CINEMATIC POSTER DIRECTION:
+- Treat this as premium theatrical key art for a film inspired by the article.
+- Create one striking, story-rich frame with strong emotional tension and visual drama.
+- Use cinematic depth, atmosphere, and scale (foreground, midground, background) to feel like a movie scene.
+- Prioritize dynamic composition, dramatic perspective, and a clear hero subject that represents the article's core idea.
+- Use high-impact lighting: motivated highlights, deep shadows, and controlled contrast for a dramatic look.
+- Ensure the scene is contextually accurate to the article topic, not generic stock imagery.
+  `.trim();
 
   // Build comprehensive, reasoning-friendly prompt
   return `
@@ -172,8 +249,22 @@ ${styleGuide.style}
 LIGHTING & ATMOSPHERE:
 ${styleGuide.lighting}
 
+${cinematicDirection}
+
+TYPOGRAPHY (MANDATORY):
+- Include cover text on the image, like premium streaming/Netflix key art.
+- Primary headline text to render clearly: "${coverHeadline}"
+- Secondary kicker line: "${coverKicker}"
+- Do NOT use the full original article title. Keep cover copy short, catchy, and cinematic.
+- Typography style: bold cinematic sans-serif, modern, high-contrast, dramatic hierarchy.
+- Mobile-first readability is mandatory: large type, clean spacing, and clear hierarchy for phone screens.
+- Ensure text is legible against the background with proper placement, scale, and contrast.
+- Keep generous safe margins so no key text is cropped on small screens.
+- Text should feel integrated into the composition, not pasted on.
+
 TECHNICAL SPECIFICATIONS:
 - Shot like a ${styleGuide.publicationReference} magazine cover
+- Also quality-matched to modern cinematic movie-poster key art
 - Professional editorial quality
 - Rich detail and depth
 - 3:4 portrait orientation
@@ -181,8 +272,10 @@ TECHNICAL SPECIFICATIONS:
 
 IMPORTANT GUIDELINES:
 - The image must clearly relate to the article's subject matter
-- Create engaging, thought-provoking visuals that invite readers to explore the content
-- No text, logos, or typography in the image itself
+- Create a visually arresting scene that captures the article's most intriguing concept
+- Make the frame feel dramatic and cinematic without becoming fantasy-irrelevant
+- Use article context details accurately so people, setting, and objects match the story
+- Include polished, readable headline typography matching the article concept
 - Maintain professional publication standards
 - Ensure the visual story aligns with the article's narrative
   `.trim();

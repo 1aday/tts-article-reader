@@ -1,33 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { articles } from "@/lib/db/schema";
-import { eq, or, isNull, inArray } from "drizzle-orm";
+import { eq, or, isNull, inArray, like } from "drizzle-orm";
 import { generateImage } from "@/lib/api/replicate";
 import { buildImagePrompt } from "@/lib/utils/image-generation";
+import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
 
 export const maxDuration = 300; // 5 minutes
+
+const MAX_GENERATION_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 4000;
+const RETRYABLE_GENERATION_ERROR =
+  /(429|503|504|busy|overload|overloaded|temporar|timeout|rate limit|too many requests|try again)/i;
+
+function shouldRetryGenerationError(message: string): boolean {
+  return RETRYABLE_GENERATION_ERROR.test(message);
+}
+
+async function generateImageWithRetry(
+  articleId: number,
+  prompt: string
+): Promise<string> {
+  let lastError: string | null = null;
+
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+    try {
+      return await generateImage({
+        prompt,
+        aspectRatio: "3:4",
+        resolution: "2K",
+        outputFormat: "jpg"
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      lastError = errorMessage;
+      const canRetry =
+        attempt < MAX_GENERATION_ATTEMPTS && shouldRetryGenerationError(errorMessage);
+
+      if (!canRetry) {
+        throw new Error(errorMessage);
+      }
+
+      const delayMs = RETRY_BASE_DELAY_MS * attempt;
+      console.warn(`[Bulk] Retry ${attempt}/${MAX_GENERATION_ATTEMPTS - 1} for article ${articleId} after busy error:`, errorMessage);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(lastError || "Image generation failed after retries");
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { articleIds, regenerate } = await req.json();
 
-    let query = db.select().from(articles);
+    let filterCondition: ReturnType<typeof inArray> | ReturnType<typeof or> | undefined;
 
     if (articleIds && Array.isArray(articleIds) && articleIds.length > 0) {
       // Generate for specific articles
-      query = query.where(inArray(articles.id, articleIds)) as any;
+      filterCondition = inArray(articles.id, articleIds);
     } else if (!regenerate) {
       // Only generate for pending articles (no generated image yet)
-      query = query.where(
-        or(
-          eq(articles.imageGenerationStatus, "pending"),
-          isNull(articles.imageGenerationStatus),
-          eq(articles.imageGenerationStatus, "failed")
-        )
-      ) as any;
+      filterCondition = or(
+        eq(articles.imageGenerationStatus, "pending"),
+        isNull(articles.imageGenerationStatus),
+        eq(articles.imageGenerationStatus, "failed"),
+        isNull(articles.generatedImageUrl),
+        like(articles.generatedImageUrl, "%replicate.delivery%")
+      );
     }
 
-    const articlesToProcess = await query;
+    const articlesToProcess = filterCondition
+      ? await db.select().from(articles).where(filterCondition)
+      : await db.select().from(articles);
 
     console.log("[Bulk Image Generation] Starting:", {
       totalArticles: articlesToProcess.length,
@@ -45,11 +90,17 @@ export async function POST(req: NextRequest) {
 
     for (const article of articlesToProcess) {
       try {
+        const hasPersistentImage = hasPersistentGeneratedImage(article.generatedImageUrl);
+
         // Skip if already has image and not regenerating
-        if (article.generatedImageUrl && !regenerate) {
+        if (hasPersistentImage && !regenerate) {
           console.log(`[Bulk] Skipping article ${article.id} - already has image`);
           results.skipped++;
           continue;
+        }
+
+        if (article.generatedImageUrl && !hasPersistentImage) {
+          console.log(`[Bulk] Replacing temporary generated image URL for article ${article.id}`);
         }
 
         console.log(`[Bulk] Generating image for article ${article.id}: ${article.title}`);
@@ -76,13 +127,8 @@ export async function POST(req: NextRequest) {
             summary: article.originalText?.slice(0, 500) || article.title
           });
 
-          // Generate image
-          const imageUrl = await generateImage({
-            prompt,
-            aspectRatio: "3:4",
-            resolution: "2K",
-            outputFormat: "jpg"
-          });
+          // Generate image with retry for transient busy/rate-limit errors
+          const imageUrl = await generateImageWithRetry(article.id, prompt);
 
           // Update article with generated image
           await db

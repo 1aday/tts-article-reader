@@ -9,8 +9,14 @@ import { articles } from "@/lib/db/schema";
  */
 export async function GET() {
   try {
-    // Get all articles
-    const allArticles = await db.select().from(articles);
+    // Fetch only cached categorization fields used by this endpoint.
+    const allArticles = await db
+      .select({
+        id: articles.id,
+        categoriesJson: articles.categoriesJson,
+        tagsJson: articles.tagsJson,
+      })
+      .from(articles);
 
     // Count categories and tags from JSON cache
     const categoryCount = new Map<string, number>();

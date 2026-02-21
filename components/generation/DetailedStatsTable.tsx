@@ -44,28 +44,42 @@ export function DetailedStatsTable({
 
   const minChunkTime = chunkTimings.length > 0 ? Math.min(...chunkTimings) : 0;
   const maxChunkTime = chunkTimings.length > 0 ? Math.max(...chunkTimings) : 0;
+  const chunksPct = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
+  const wordsPct = wordCount > 0 ? Math.round((wordsProcessed / wordCount) * 100) : 0;
 
   return (
-    <div className="bg-surface-2 border-2 border-white/10 rounded-xl overflow-hidden mb-8">
+    <section className="mb-8 overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(150deg,rgba(13,17,26,0.9),rgba(8,10,16,0.88))] shadow-[0_14px_40px_rgba(0,0,0,0.34)]">
       {/* Header (always visible) */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+        className="w-full px-5 py-4 transition-colors hover:bg-white/5 sm:px-6"
       >
-        <div className="flex items-center gap-3">
-          <BarChart3 className="w-5 h-5 text-[#a855f7]" />
-          <span className="font-semibold text-white">Detailed Statistics</span>
+        <div className="flex items-center gap-3 text-left">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e50914]/35 bg-[#e50914]/12">
+            <BarChart3 className="h-4 w-4 text-[#ff5862]" />
+          </span>
+          <div>
+            <div className="font-semibold text-white">Detailed Statistics</div>
+            <div className="text-[11px] text-white/45">
+              {completedChunks}/{totalChunks} chunks · {chunksPct}% complete
+            </div>
+          </div>
         </div>
-        <ChevronDown
-          className={`w-5 h-5 text-white/60 transition-transform ${
-            isExpanded ? "rotate-180" : ""
-          }`}
-        />
+        <div className="flex items-center gap-3">
+          <span className="hidden rounded-full border border-white/12 bg-white/5 px-2 py-1 text-[11px] text-white/60 sm:inline-flex">
+            {wordsPct}% text
+          </span>
+          <ChevronDown
+            className={`h-5 w-5 text-white/60 transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
       </button>
 
       {/* Expandable content */}
       {isExpanded && (
-        <div className="px-6 pb-6 space-y-3 animate-fadeInDown">
+        <div className="animate-fadeInDown space-y-3 border-t border-white/10 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
           <StatRow
             label="Text Enhanced"
             value={`${wordsProcessed.toLocaleString()} / ${wordCount.toLocaleString()} words`}
@@ -100,8 +114,8 @@ export function DetailedStatsTable({
               value={voiceName}
               sublabel={
                 voiceId
-                  ? `${modelInfo || "eleven_turbo_v2_5"} • Voice ID: ${voiceId.slice(0, 8)}...`
-                  : modelInfo || "eleven_turbo_v2_5"
+                  ? `${modelInfo || "eleven_v3"} • Voice ID: ${voiceId.slice(0, 8)}...`
+                  : modelInfo || "eleven_v3"
               }
             />
           )}
@@ -114,7 +128,7 @@ export function DetailedStatsTable({
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -132,31 +146,33 @@ function StatRow({
   color?: "green" | "cyan" | "purple" | "gray";
 }) {
   const colorMap = {
-    green: "from-[#e50914] to-[#e50914]",
-    cyan: "from-[#e50914] to-[#a855f7]",
-    purple: "from-[#a855f7] to-[#ff00ff]",
+    green: "from-[#e50914] to-[#b20710]",
+    cyan: "from-[#e50914] to-[#f40612]",
+    purple: "from-[#b20710] to-[#e50914]",
     gray: "from-white/20 to-white/10"
   };
+  const boundedPercentage =
+    percentage !== undefined ? Math.max(0, Math.min(100, percentage)) : undefined;
 
   return (
-    <div className="flex items-start justify-between py-2 border-b border-white/5 last:border-0">
+    <div className="flex items-start justify-between rounded-xl border border-white/10 bg-black/25 px-3 py-3 last:mb-0">
       <div className="flex-1">
-        <div className="text-sm text-white/60 mb-1">{label}</div>
+        <div className="mb-1 text-sm text-white/62">{label}</div>
         {percentage !== undefined && (
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-2 bg-surface-3 rounded-full overflow-hidden">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
               <div
                 className={`h-full bg-gradient-to-r ${colorMap[color]} transition-all duration-500`}
-                style={{ width: `${percentage}%` }}
+                style={{ width: `${boundedPercentage}%` }}
               />
             </div>
             <span className="text-xs text-white/40 min-w-[40px] text-right">
-              {percentage.toFixed(0)}%
+              {boundedPercentage?.toFixed(0)}%
             </span>
           </div>
         )}
       </div>
-      <div className="ml-6 text-right">
+      <div className="ml-4 text-right sm:ml-6">
         <div className="text-base font-semibold text-white">{value}</div>
         {sublabel && <div className="text-xs text-white/40 mt-1">{sublabel}</div>}
       </div>

@@ -46,4 +46,10 @@
 | #2703 | 12:32 AM | 🔵 | Desktop Project Currently Uses GPT-4o-mini for Text Enhancement | ~334 |
 | #2651 | 12:07 AM | 🔴 | Added Diagnostic Logging to Text Enhancement Streaming | ~417 |
 | #2647 | 12:02 AM | 🔵 | Text Enhancement Pipeline Uses GPT-4o-mini for TTS Optimization | ~438 |
+
+### Feb 17, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #9968 | 10:34 PM | 🔵 | TTS Article Reader Uses Replicate API with "Nano Banana Pro" Model Reference | ~457 |
 </claude-mem-context>

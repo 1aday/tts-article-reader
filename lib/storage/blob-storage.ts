@@ -8,6 +8,7 @@ import { put, del } from "@vercel/blob";
 // - Production: Vercel Blob Storage (persistent, CDN-backed)
 
 const isProduction = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+const canUseBlobStorage = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 const STORAGE_DIR = join(process.cwd(), "storage", "audio");
 
 async function ensureStorageDir() {
@@ -20,13 +21,15 @@ export async function uploadAudio(
   buffer: Buffer,
   filename: string
 ): Promise<string> {
-  if (isProduction) {
-    // Production: Use Vercel Blob Storage
+  const shouldUseBlobStorage = isProduction && canUseBlobStorage;
+
+  if (shouldUseBlobStorage) {
+    // Production: Use Vercel Blob Storage when token is available
     try {
       console.log("[Blob Storage] Attempting upload:", {
         filename,
         bufferSize: buffer.length,
-        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+        hasToken: canUseBlobStorage
       });
 
       const blob = await put(filename, buffer, {
@@ -46,7 +49,11 @@ export async function uploadAudio(
       throw new Error(`Failed to upload audio file to storage: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    // Development: Use local filesystem
+    if (isProduction && !canUseBlobStorage) {
+      console.warn("[Blob Storage] BLOB_READ_WRITE_TOKEN missing. Falling back to local storage.");
+    }
+
+    // Local fallback: Use filesystem
     await ensureStorageDir();
     const filepath = join(STORAGE_DIR, filename);
     await writeFile(filepath, buffer);
@@ -61,12 +68,15 @@ export function getAudioPath(filename: string): string {
 
 export async function deleteAudio(blobUrl: string): Promise<void> {
   try {
-    if (isProduction) {
+    const isLocalPath = blobUrl.startsWith("/storage/audio/");
+    const shouldUseBlobStorage = isProduction && canUseBlobStorage && !isLocalPath;
+
+    if (shouldUseBlobStorage) {
       // Production: Delete from Vercel Blob
       // blobUrl is the full Vercel Blob URL
       await del(blobUrl);
     } else {
-      // Development: Delete from local filesystem
+      // Local storage: Delete from filesystem
       const filename = blobUrl.split("/").pop();
       if (!filename) {
         console.warn(`Invalid blob URL: ${blobUrl}`);

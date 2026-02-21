@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Plus, Play, Download, Music, Calendar, Link as LinkIcon, Pause, SkipBack, SkipForward, Volume2, Maximize2, Loader2, Trash2, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Play, Download, Music, Loader2, Trash2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { FilterBar } from "@/components/library/FilterBar";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 interface AudioFile {
   id: number;
@@ -36,21 +38,11 @@ interface Article {
   audioFiles: AudioFile[];
 }
 
-interface NowPlaying {
-  audio: AudioFile;
-  article: Article;
-}
-
 export default function LibraryPage() {
   const router = useRouter();
+  const { currentTrack, isStickyPlayerVisible, play, pause } = usePlayer();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Filter state
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
@@ -114,86 +106,19 @@ export default function LibraryPage() {
   };
 
   const handlePlayAudio = (audio: AudioFile, article: Article) => {
-    if (nowPlaying?.audio.id === audio.id) {
-      // Toggle play/pause for current track
-      if (isPlaying) {
-        audioRef.current?.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current?.play();
-        setIsPlaying(true);
-      }
-    } else {
-      // Play new track
-      setNowPlaying({ audio, article });
-      setIsPlaying(true);
-    }
+    play({
+      id: audio.id,
+      articleId: article.id,
+      articleTitle: article.title,
+      articleImageUrl: hasPersistentGeneratedImage(article.generatedImageUrl)
+        ? article.generatedImageUrl
+        : article.imageUrl,
+      voiceName: audio.voiceName,
+      blobUrl: audio.blobUrl,
+      duration: audio.duration || 0,
+    });
+    router.push(`/player/${audio.id}`);
   };
-
-  const togglePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    setCurrentTime(time);
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value);
-    setVolume(vol);
-    if (audioRef.current) {
-      audioRef.current.volume = vol;
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
-
-    audio.addEventListener("timeupdate", updateTime);
-    audio.addEventListener("loadedmetadata", updateDuration);
-    audio.addEventListener("ended", handleEnded);
-
-    return () => {
-      audio.removeEventListener("timeupdate", updateTime);
-      audio.removeEventListener("loadedmetadata", updateDuration);
-      audio.removeEventListener("ended", handleEnded);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (nowPlaying && audioRef.current) {
-      // Use proxy for CORS compatibility
-      const proxyUrl = `/api/audio/proxy?url=${encodeURIComponent(nowPlaying.audio.blobUrl)}`;
-      audioRef.current.src = proxyUrl;
-      audioRef.current.load(); // Force reload
-      audioRef.current.play().catch((error) => {
-        console.error("Playback error:", error);
-        toast.error("Failed to play audio. Try downloading instead.");
-      });
-    }
-  }, [nowPlaying]);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -201,10 +126,6 @@ export default function LibraryPage() {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const formatFileSize = (bytes: number) => {
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
 
   // Filter handlers
@@ -402,14 +323,9 @@ export default function LibraryPage() {
       // Remove from local state
       setArticles((prev) => prev.filter((a) => a.id !== articleToDelete.id));
 
-      // Stop playback if deleted article was playing
-      if (nowPlaying?.article.id === articleToDelete.id) {
-        setNowPlaying(null);
-        setIsPlaying(false);
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.src = "";
-        }
+      // Stop playback if deleted article is currently playing in the shared player.
+      if (currentTrack?.articleId === articleToDelete.id) {
+        pause();
       }
     } catch (error) {
       console.error("Delete error:", error);
@@ -472,11 +388,11 @@ export default function LibraryPage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
-      <div className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 ${nowPlaying ? 'pb-40 sm:pb-32' : ''}`}>
+      <div className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 ${currentTrack && isStickyPlayerVisible ? 'pb-40 sm:pb-32' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-12 sm:mb-16 md:mb-20 animate-fadeInDown">
           <div className="space-y-2 sm:space-y-3">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight">
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
               Library
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#d2d2d2] leading-relaxed">
@@ -566,29 +482,19 @@ export default function LibraryPage() {
             </div>
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="bg-[#2f2f2f] backdrop-blur-md border border-[#404040] rounded-3xl p-12 sm:p-16 md:p-20 shadow-2xl animate-fadeInUp">
-            <div className="text-center space-y-8 sm:space-y-10">
-              <div className="flex justify-center">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full bg-[#181818] border-2 border-[#e50914]/30 flex items-center justify-center">
-                  <FileText className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-[#808080]" />
-                </div>
-              </div>
-              <div className="space-y-3 sm:space-y-4">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
-                  No matching articles
-                </h2>
-                <p className="text-lg sm:text-xl text-[#d2d2d2] max-w-md mx-auto px-4 leading-relaxed">
-                  Try adjusting your filters to see more results
-                </p>
-              </div>
-              <Button
-                size="xl"
-                onClick={handleClearFilters}
-                className="netflix-button netflix-button-primary font-bold shadow-2xl"
-              >
-                Clear All Filters
-              </Button>
+          <div className="animate-fadeInUp py-16 text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/5">
+              <FileText className="h-7 w-7 text-white/45" />
             </div>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-white">No matching articles</h2>
+            <p className="mt-2 text-white/60">Try adjusting filters to show more results.</p>
+            <Button
+              size="lg"
+              onClick={handleClearFilters}
+              className="mt-6 netflix-button netflix-button-primary font-semibold"
+            >
+              Clear Filters
+            </Button>
           </div>
         ) : (
           <div className="space-y-12 sm:space-y-16">
@@ -600,13 +506,13 @@ export default function LibraryPage() {
             )}
 
             {/* Grid view with Netflix-style cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {filteredArticles.map((article, index) => (
                 <div
                   key={article.id}
-                  className={`group relative overflow-hidden rounded-2xl bg-surface-1 border-2 border-white/10 hover:border-[#e50914]/40 hover:shadow-[0_0_40px_rgba(229,9,20,0.3)] transition-all duration-500 hover:scale-105 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
+                  className={`group relative overflow-hidden rounded-xl bg-surface-1/90 border border-white/10 hover:border-[#e50914]/35 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
                   onClick={() => {
-                    // Click card to play inline if audio exists
+                    // Click card to open full player when audio exists
                     if (article.audioFiles.length > 0) {
                       handlePlayAudio(article.audioFiles[0], article);
                     } else {
@@ -615,10 +521,10 @@ export default function LibraryPage() {
                   }}
                 >
                   {/* Featured Image */}
-                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#e50914]/20 to-[#e50914]/20">
-                    {(article.generatedImageUrl || article.imageUrl) ? (
+                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#e50914]/25 to-[#b20710]/25">
+                    {(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) ? (
                       <img
-                        src={article.generatedImageUrl || article.imageUrl || ''}
+                        src={(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) || ''}
                         alt={article.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
@@ -635,14 +541,14 @@ export default function LibraryPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-80 group-hover:opacity-60 transition-opacity duration-300" />
 
                     {/* Action Buttons */}
-                    <div className="absolute top-4 left-4 flex gap-2 z-10">
+                    <div className="absolute top-3 left-3 flex gap-1.5 z-10">
                       {/* Delete Button */}
                       <button
                         onClick={(e) => handleDeleteClick(e, article)}
-                        className="w-10 h-10 bg-red-500/90 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
+                        className="w-8 h-8 bg-black/55 hover:bg-red-500/90 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
                         title="Delete article"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
 
                       {/* Refresh Image Button - Only show if article has a source URL */}
@@ -650,14 +556,14 @@ export default function LibraryPage() {
                         <button
                           onClick={(e) => handleRefreshImage(e, article.id)}
                           disabled={refreshingImageId === article.id}
-                          className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110 ${
+                          className={`w-8 h-8 text-white rounded-full flex items-center justify-center transition-all duration-200 ${
                             !article.imageUrl
                               ? "bg-[#e50914]/90 hover:bg-[#e50914] opacity-100"
                               : "bg-[#e50914]/90 hover:bg-[#e50914] opacity-0 group-hover:opacity-100"
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                           title={article.imageUrl ? "Refresh image" : "Fetch image"}
                         >
-                          <RefreshCw className={`w-5 h-5 ${refreshingImageId === article.id ? "animate-spin" : ""}`} />
+                          <RefreshCw className={`w-4 h-4 ${refreshingImageId === article.id ? "animate-spin" : ""}`} />
                         </button>
                       )}
 
@@ -665,123 +571,70 @@ export default function LibraryPage() {
                       <button
                         onClick={(e) => handleGenerateImage(e, article.id)}
                         disabled={generatingImageId === article.id || article.imageGenerationStatus === "generating"}
-                        className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110 ${
-                          !article.generatedImageUrl
-                            ? "bg-[#a855f7]/90 hover:bg-[#a855f7] opacity-100"
-                            : "bg-[#a855f7]/90 hover:bg-[#a855f7] opacity-0 group-hover:opacity-100"
+                        className={`w-8 h-8 text-white rounded-full flex items-center justify-center transition-all duration-200 ${
+                          !hasPersistentGeneratedImage(article.generatedImageUrl)
+                            ? "bg-[#e50914]/90 hover:bg-[#e50914] opacity-100"
+                            : "bg-[#e50914]/90 hover:bg-[#e50914] opacity-0 group-hover:opacity-100"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        title={article.generatedImageUrl ? "Regenerate AI image" : "Generate AI image"}
+                        title={hasPersistentGeneratedImage(article.generatedImageUrl) ? "Regenerate AI image" : "Generate AI image"}
                       >
                         {generatingImageId === article.id || article.imageGenerationStatus === "generating" ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <Sparkles className="w-5 h-5" />
+                          <Sparkles className="w-4 h-4" />
                         )}
                       </button>
                     </div>
 
                     {/* Audio Status Badge */}
                     {article.audioFiles.length > 0 && (
-                      <div className="absolute top-4 right-4 bg-[#e50914] text-black px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg">
-                        <Music className="w-3 h-3" />
+                      <div className="absolute top-3 right-3 bg-black/65 text-white px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                        <Music className="w-3 h-3 text-[#e50914]" />
                         {article.audioFiles.length}
                       </div>
                     )}
                   </div>
 
                   {/* Article Info */}
-                  <div className="p-6 space-y-4">
+                  <div className="p-5 space-y-3.5">
                     <div className="space-y-2">
-                      <h3 className="text-xl sm:text-2xl font-bold text-white line-clamp-2 group-hover:text-[#e50914] transition-colors">
+                      <h3 className="text-lg sm:text-xl font-semibold text-white line-clamp-2 group-hover:text-[#ff6a70] transition-colors">
                         {article.title}
                       </h3>
-                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/60">
-                        <span className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-[#e50914]" />
-                          {article.wordCount.toLocaleString()}
-                        </span>
-                        <span className="text-white/30">•</span>
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#e50914]" />
-                          {formatDate(article.createdAt)}
-                        </span>
-                        {article.sourceUrl && (
-                          <>
-                            <span className="text-white/30">•</span>
-                            <span className="flex items-center gap-1.5">
-                              <LinkIcon className="w-3.5 h-3.5 text-[#a855f7]" />
-                              URL
-                            </span>
-                          </>
-                        )}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/60">
+                        <span>{article.wordCount.toLocaleString()} words</span>
+                        <span>{formatDate(article.createdAt)}</span>
+                        {article.sourceUrl && <span>URL</span>}
                       </div>
                     </div>
 
-                    {/* Categories and Tags */}
-                    {(article.categories.length > 0 || article.tags.length > 0 || article.categorizationStatus !== "completed") && (
-                      <div className="flex flex-wrap gap-2 pt-3">
-                        {/* Categorizing Status */}
-                        {article.categorizationStatus === "processing" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Categorizing...
-                          </span>
-                        )}
-                        {article.categorizationStatus === "pending" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Pending...
-                          </span>
-                        )}
-
-                        {/* Category Badges (max 2) */}
-                        {article.categories.slice(0, 2).map((category, idx) => (
-                          <span
-                            key={`cat-${idx}`}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-gradient-to-r from-[#e50914]/20 to-[#e50914]/20 text-[#e50914] border border-[#e50914]/30"
-                          >
-                            {category}
-                          </span>
-                        ))}
-
-                        {/* Tag Badges (max 3) */}
-                        {article.tags.slice(0, 3).map((tag, idx) => (
-                          <span
-                            key={`tag-${idx}`}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-
-                        {/* More indicator */}
-                        {(article.categories.length > 2 || article.tags.length > 3) && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-white/10 text-white/60 border border-white/20">
-                            +{(article.categories.length > 2 ? article.categories.length - 2 : 0) + (article.tags.length > 3 ? article.tags.length - 3 : 0)} more
-                          </span>
-                        )}
+                    {(article.categories.length > 0 || article.tags.length > 0) && (
+                      <div className="text-[11px] text-white/50">
+                        {article.categories.slice(0, 1).join("")}
+                        {article.categories.length > 0 && article.tags.length > 0 ? " · " : ""}
+                        {article.tags.length > 0 ? `${article.tags.length} tags` : ""}
                       </div>
                     )}
 
                     {/* Quick Actions */}
-                    <div className="flex gap-2 pt-4 border-t border-white/10" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                       {article.audioFiles.length > 0 ? (
                         <>
                           <Button
                             onClick={() => handlePlayAudio(article.audioFiles[0], article)}
                             size="sm"
-                            className="flex-1 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 font-semibold shadow-lg"
+                            className="flex-1 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white hover:opacity-90 font-semibold"
                           >
-                            <Play className="w-3.5 h-3.5 mr-1.5" fill="black" />
+                            <Play className="w-3.5 h-3.5 mr-1.5" fill="white" />
                             Play
                           </Button>
                           <Button
                             onClick={() => handleDownload(article.audioFiles[0].blobUrl, article.id, article.audioFiles[0].voiceName)}
                             size="sm"
                             variant="outline"
-                            className="flex-1 border-[#e50914] text-[#e50914] hover:bg-[#e50914]/10"
+                            className="flex-1 border-white/20 text-white/80 hover:bg-white/8 hover:text-white"
                           >
-                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                            <Download className="w-3.5 h-3.5 mr-1.5 text-[#e50914]" />
                             Download
                           </Button>
                         </>
@@ -789,7 +642,7 @@ export default function LibraryPage() {
                         <Button
                           onClick={() => router.push(`/voice-select/${article.id}`)}
                           size="sm"
-                          className="flex-1 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 font-semibold"
+                          className="flex-1 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white hover:opacity-90 font-semibold"
                         >
                           <Plus className="w-3.5 h-3.5 mr-1.5" />
                           Generate Audio
@@ -803,129 +656,6 @@ export default function LibraryPage() {
           </div>
         )}
       </div>
-
-      {/* Integrated Audio Player - Fixed at Bottom */}
-      {nowPlaying && (
-        <div className="fixed bottom-0 left-0 right-0 bg-surface-1 border-t-2 border-[#e50914]/30 backdrop-blur-xl z-50 shadow-2xl shadow-[#e50914]/20 animate-slideInFromBottom">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              {/* Track Info */}
-              <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-[#e50914]/20 to-[#e50914]/20 flex items-center justify-center border-2 border-[#e50914]/30 flex-shrink-0">
-                  <Music className="w-7 h-7 sm:w-8 sm:h-8 text-[#e50914]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base sm:text-lg font-bold text-white truncate">
-                    {nowPlaying.article.title}
-                  </div>
-                  <div className="text-sm text-white/60 truncate">
-                    {nowPlaying.audio.voiceName}
-                  </div>
-                </div>
-              </div>
-
-              {/* Playback Controls */}
-              <div className="flex flex-col items-center gap-2 flex-1 w-full sm:w-auto">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-white/70 hover:text-white w-8 h-8 sm:w-10 sm:h-10"
-                    onClick={() => {
-                      if (audioRef.current) {
-                        audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
-                      }
-                    }}
-                  >
-                    <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    onClick={togglePlayPause}
-                    className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-[#e50914] to-[#e50914] text-black hover:opacity-90 rounded-full shadow-lg shadow-[#e50914]/30"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-5 h-5 sm:w-6 sm:h-6" fill="black" />
-                    ) : (
-                      <Play className="w-5 h-5 sm:w-6 sm:h-6" fill="black" />
-                    )}
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-white/70 hover:text-white w-8 h-8 sm:w-10 sm:h-10"
-                    onClick={() => {
-                      if (audioRef.current) {
-                        audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
-                      }
-                    }}
-                  >
-                    <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </Button>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="flex items-center gap-2 w-full max-w-md">
-                  <span className="text-xs text-white/50 min-w-[40px]">
-                    {formatTime(currentTime)}
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 0}
-                    value={currentTime}
-                    onChange={handleSeek}
-                    className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(229,9,20,0.5)] hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
-                  />
-                  <span className="text-xs text-white/50 min-w-[40px] text-right">
-                    {formatTime(duration)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Volume & Actions */}
-              <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-                <div className="hidden sm:flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-white/60" />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className="w-20 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:cursor-pointer"
-                  />
-                </div>
-
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => router.push(`/player/${nowPlaying.audio.id}`)}
-                  className="text-white/70 hover:text-white w-8 h-8 sm:w-10 sm:h-10"
-                  title="Full Player"
-                >
-                  <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden Audio Element */}
-      <audio
-        ref={audioRef}
-        crossOrigin="anonymous"
-        onError={(e) => {
-          console.error("Audio playback error:", e);
-          toast.error("Failed to load audio. Please try downloading instead.");
-        }}
-        onLoadStart={() => console.log("Audio loading started")}
-        onCanPlay={() => console.log("Audio can play")}
-      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog

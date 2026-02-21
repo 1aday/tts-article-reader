@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   Play, Pause, Home, Library, Download, Volume2, VolumeX,
-  SkipBack, SkipForward, RefreshCw, Trash2, ChevronDown, ChevronUp
+  SkipBack, SkipForward, RefreshCw, Trash2, ChevronDown, ChevronUp, Loader2, Keyboard, Sparkles, Settings2
 } from "lucide-react";
 import { VoiceSelector } from "@/components/voice-selector";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { AudioSettingsPanel } from "@/components/audio-settings-panel";
+import { DEFAULT_GENERATION_AUDIO_SETTINGS } from "@/lib/audio-settings";
+import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 interface Article {
   id: number;
@@ -18,10 +21,16 @@ interface Article {
   wordCount: number;
   sourceType: string;
   createdAt: string;
+  imageUrl?: string | null;
+  generatedImageUrl?: string | null;
+  imageGenerationStatus?: string | null;
+  imageGenerationError?: string | null;
 }
 
 interface AudioFile {
   id: number;
+  articleId: number;
+  voiceId: string;
   voiceName: string;
   duration: number;
   fileSize: number;
@@ -29,9 +38,41 @@ interface AudioFile {
   blobUrl: string;
 }
 
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const VOLUME_STORAGE_KEY = "tts-full-player-volume";
+const PLAYBACK_RATE_STORAGE_KEY = "tts-full-player-playback-rate";
+const LISTENING_PROGRESS_PREFIX = "tts-full-player-progress-";
+const GENERATED_COVER_MEDIA_SESSION_SIZE = "768x1024";
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const getListeningProgressStorageKey = (id: number) => `${LISTENING_PROGRESS_PREFIX}${id}`;
+
+const persistListeningProgress = (id: number, time: number) => {
+  if (typeof window === "undefined" || !Number.isFinite(time)) return;
+  try {
+    localStorage.setItem(getListeningProgressStorageKey(id), String(time));
+  } catch {
+    // Ignore localStorage write errors.
+  }
+};
+
+const clearSavedListeningProgress = (id: number) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(getListeningProgressStorageKey(id));
+  } catch {
+    // Ignore localStorage remove errors.
+  }
+};
+
 export default function PlayerPage() {
   const params = useParams();
   const router = useRouter();
+  const {
+    currentTrack: stickyTrack,
+    isPlaying: stickyIsPlaying,
+    currentTime: stickyCurrentTime,
+    pause: pauseSticky,
+  } = usePlayer();
   const audioId = parseInt(params.audioId as string);
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -40,69 +81,443 @@ export default function PlayerPage() {
   const [allAudioVersions, setAllAudioVersions] = useState<AudioFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showActionsCard, setShowActionsCard] = useState(false);
+  const [showSpeedControls, setShowSpeedControls] = useState(false);
 
   // Regeneration panel state
   const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("");
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>("");
   const [regenerating, setRegenerating] = useState(false);
-  const [stability, setStability] = useState(0.5);
-  const [similarityBoost, setSimilarityBoost] = useState(0.75);
-  const [style, setStyle] = useState(0);
-  const [useSpeakerBoost, setUseSpeakerBoost] = useState(true);
+  const [stability, setStability] = useState(DEFAULT_GENERATION_AUDIO_SETTINGS.stability);
+  const [similarityBoost, setSimilarityBoost] = useState(DEFAULT_GENERATION_AUDIO_SETTINGS.similarityBoost);
+  const [style, setStyle] = useState(DEFAULT_GENERATION_AUDIO_SETTINGS.style);
+  const [useSpeakerBoost, setUseSpeakerBoost] = useState(DEFAULT_GENERATION_AUDIO_SETTINGS.useSpeakerBoost);
+  const [enableScriptEnhancement, setEnableScriptEnhancement] = useState(DEFAULT_GENERATION_AUDIO_SETTINGS.enableScriptEnhancement);
   const [keepOldVersion, setKeepOldVersion] = useState(true);
 
   // Confirmation dialogs
   const [showDeleteAudioDialog, setShowDeleteAudioDialog] = useState(false);
   const [showDeleteArticleDialog, setShowDeleteArticleDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [regeneratingImage, setRegeneratingImage] = useState(false);
+
+  const handleActionsCardToggle = () => {
+    setShowActionsCard((prev) => {
+      const next = !prev;
+      if (!next) {
+        setShowRegeneratePanel(false);
+      }
+      return next;
+    });
+  };
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const visualizerConnectedRef = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastVolumeBeforeMuteRef = useRef(1);
+  const lastSavedSecondRef = useRef(-1);
+  const handoffTimeRef = useRef<number | null>(null);
+  const handoffShouldAutoplayRef = useRef(false);
 
   useEffect(() => {
-    loadAudio();
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+    try {
+      const storedVolume = localStorage.getItem(VOLUME_STORAGE_KEY);
+      const parsedVolume = storedVolume ? Number(storedVolume) : NaN;
+      if (Number.isFinite(parsedVolume)) {
+        const safeVolume = clamp(parsedVolume, 0, 1);
+        setVolume(safeVolume);
+        if (safeVolume > 0) {
+          lastVolumeBeforeMuteRef.current = safeVolume;
+        }
       }
+
+      const storedRate = localStorage.getItem(PLAYBACK_RATE_STORAGE_KEY);
+      const parsedRate = storedRate ? Number(storedRate) : NaN;
+      if (Number.isFinite(parsedRate)) {
+        setPlaybackRate(clamp(parsedRate, 0.5, 2));
+      }
+    } catch {
+      // Ignore localStorage access errors.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VOLUME_STORAGE_KEY, String(volume));
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLAYBACK_RATE_STORAGE_KEY, String(playbackRate));
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  }, [playbackRate]);
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    void loadAudio();
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (sourceNodeRef.current) {
+        try {
+          sourceNodeRef.current.disconnect();
+        } catch {
+          // Ignore disconnect issues on teardown.
+        }
+      }
+      if (analyzerRef.current) {
+        try {
+          analyzerRef.current.disconnect();
+        } catch {
+          // Ignore disconnect issues on teardown.
+        }
+      }
+      if (audioContextRef.current) {
+        void audioContextRef.current.close();
+      }
+      sourceNodeRef.current = null;
+      visualizerConnectedRef.current = false;
+      analyzerRef.current = null;
+      audioContextRef.current = null;
     };
   }, [audioId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
+      audioRef.current.playbackRate = clamp(playbackRate, 0.5, 2);
     }
   }, [playbackRate]);
 
   useEffect(() => {
-    if (playing && audioRef.current && !analyzerRef.current) {
-      setupVisualizer();
+    if (!audioRef.current) return;
+    audioRef.current.setAttribute("playsinline", "true");
+    audioRef.current.setAttribute("webkit-playsinline", "true");
+  }, []);
+
+  useEffect(() => {
+    const navigatorWithAudioSession = navigator as Navigator & {
+      audioSession?: { type?: string };
+    };
+
+    if (!navigatorWithAudioSession.audioSession) return;
+
+    try {
+      navigatorWithAudioSession.audioSession.type = "playback";
+    } catch {
+      // Ignore unsupported audio session behavior.
     }
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audioId)) return;
+
+    const persistCurrentProgress = () => {
+      if (!Number.isFinite(audio.currentTime)) return;
+      persistListeningProgress(audioId, audio.currentTime);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        persistCurrentProgress();
+      }
+    };
+
+    window.addEventListener("pagehide", persistCurrentProgress);
+    window.addEventListener("beforeunload", persistCurrentProgress);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", persistCurrentProgress);
+      window.removeEventListener("beforeunload", persistCurrentProgress);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      persistCurrentProgress();
+    };
+  }, [audioId]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+
+    const mediaSession = navigator.mediaSession;
+    const mediaActions: MediaSessionAction[] = [
+      "play",
+      "pause",
+      "seekbackward",
+      "seekforward",
+      "seekto",
+    ];
+
+    const setActionHandler = (
+      action: MediaSessionAction,
+      handler: MediaSessionActionHandler | null,
+    ) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Ignore unsupported media actions.
+      }
+    };
+
+    if (!audioData || !article) {
+      mediaSession.metadata = null;
+      mediaSession.playbackState = "none";
+      mediaActions.forEach((action) => setActionHandler(action, null));
+      return;
+    }
+
+    const artworkUrl = hasPersistentGeneratedImage(article.generatedImageUrl)
+      ? article.generatedImageUrl
+      : article.imageUrl;
+
+    mediaSession.metadata = new MediaMetadata({
+      title: article.title,
+      artist: audioData.voiceName,
+      album: "TTS Reader",
+      artwork: artworkUrl
+        ? [
+            {
+              src: artworkUrl,
+              sizes: GENERATED_COVER_MEDIA_SESSION_SIZE,
+            },
+          ]
+        : undefined,
+    });
+
+    setActionHandler("play", () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      setIsBuffering(true);
+      void audio.play().catch((error) => {
+        console.error("MediaSession play error:", error);
+        setIsBuffering(false);
+      });
+    });
+    setActionHandler("pause", () => {
+      audioRef.current?.pause();
+    });
+    setActionHandler("seekbackward", (details) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const seekOffset = details.seekOffset ?? 10;
+      const safeDuration = Number.isFinite(audio.duration) ? audio.duration : (duration || audio.currentTime);
+      const nextTime = clamp(audio.currentTime - seekOffset, 0, safeDuration);
+      audio.currentTime = nextTime;
+      setCurrentTime(nextTime);
+      persistListeningProgress(audioId, nextTime);
+    });
+    setActionHandler("seekforward", (details) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const seekOffset = details.seekOffset ?? 10;
+      const safeDuration = Number.isFinite(audio.duration)
+        ? audio.duration
+        : (duration || audio.currentTime);
+      const nextTime = clamp(audio.currentTime + seekOffset, 0, safeDuration);
+      audio.currentTime = nextTime;
+      setCurrentTime(nextTime);
+      persistListeningProgress(audioId, nextTime);
+    });
+    setActionHandler("seekto", (details) => {
+      const audio = audioRef.current;
+      if (!audio || typeof details.seekTime !== "number") return;
+      const safeDuration = Number.isFinite(audio.duration)
+        ? audio.duration
+        : (duration || details.seekTime);
+      const nextTime = clamp(details.seekTime, 0, safeDuration);
+      if (typeof audio.fastSeek === "function" && details.fastSeek) {
+        audio.fastSeek(nextTime);
+      } else {
+        audio.currentTime = nextTime;
+      }
+      setCurrentTime(nextTime);
+      persistListeningProgress(audioId, nextTime);
+    });
+
+    return () => {
+      mediaActions.forEach((action) => setActionHandler(action, null));
+    };
+  }, [article, audioData, audioId, duration]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
   }, [playing]);
 
-  const setupVisualizer = () => {
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const safeDuration = Number.isFinite(duration) ? duration : 0;
+    if (!(safeDuration > 0) || !Number.isFinite(currentTime)) return;
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: safeDuration,
+        position: clamp(currentTime, 0, safeDuration),
+        playbackRate: clamp(playbackRate, 0.5, 2),
+      });
+    } catch {
+      // Ignore unsupported position state updates.
+    }
+  }, [currentTime, duration, playbackRate]);
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    if (!playing) {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+    void setupVisualizer();
+  }, [playing]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = clamp(volume, 0, 1);
+    audioRef.current.muted = muted || volume === 0;
+  }, [muted, volume]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.code === "Space" || event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (!audioRef.current) return;
+        if (audioRef.current.paused) {
+          setIsBuffering(true);
+          void audioRef.current.play().catch((error) => {
+            console.error("Play error:", error);
+            setIsBuffering(false);
+            toast.error("Unable to play audio right now.");
+          });
+        } else {
+          audioRef.current.pause();
+        }
+        return;
+      }
+
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        if (!audioRef.current) return;
+        const next = clamp(audioRef.current.currentTime - 10, 0, duration || audioRef.current.duration || 0);
+        audioRef.current.currentTime = next;
+        setCurrentTime(next);
+        return;
+      }
+
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        if (!audioRef.current) return;
+        const next = clamp(audioRef.current.currentTime + 10, 0, duration || audioRef.current.duration || 0);
+        audioRef.current.currentTime = next;
+        setCurrentTime(next);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        if (muted || volume === 0) {
+          const restored = lastVolumeBeforeMuteRef.current > 0 ? lastVolumeBeforeMuteRef.current : 0.7;
+          setVolume(restored);
+          setMuted(false);
+        } else {
+          lastVolumeBeforeMuteRef.current = volume;
+          setMuted(true);
+        }
+        return;
+      }
+
+      if (event.key === "[" || event.key === "-") {
+        event.preventDefault();
+        const currentIndex = PLAYBACK_RATES.findIndex((rate) => rate === playbackRate);
+        const nextIndex = Math.max(0, currentIndex - 1);
+        setPlaybackRate(PLAYBACK_RATES[nextIndex]);
+        return;
+      }
+
+      if (event.key === "]" || event.key === "=" || event.key === "+") {
+        event.preventDefault();
+        const currentIndex = PLAYBACK_RATES.findIndex((rate) => rate === playbackRate);
+        const nextIndex = Math.min(PLAYBACK_RATES.length - 1, currentIndex + 1);
+        setPlaybackRate(PLAYBACK_RATES[nextIndex]);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [duration, muted, playbackRate, volume]);
+
+  const setupVisualizer = async () => {
     if (!audioRef.current || !canvasRef.current) return;
 
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const analyzer = audioContext.createAnalyser();
-    const source = audioContext.createMediaElementSource(audioRef.current);
+    const AudioContextConstructor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
-    source.connect(analyzer);
-    analyzer.connect(audioContext.destination);
+    if (!AudioContextConstructor) return;
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContextConstructor();
+      }
 
-    analyzer.fftSize = 256;
-    audioContextRef.current = audioContext;
-    analyzerRef.current = analyzer;
+      const audioContext = audioContextRef.current;
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
 
-    drawVisualizer();
+      if (!analyzerRef.current) {
+        const analyzer = audioContext.createAnalyser();
+        analyzer.fftSize = 512;
+        analyzer.smoothingTimeConstant = 0.85;
+        analyzer.minDecibels = -95;
+        analyzer.maxDecibels = -10;
+        analyzerRef.current = analyzer;
+      }
+
+      if (!sourceNodeRef.current) {
+        sourceNodeRef.current = audioContext.createMediaElementSource(audioRef.current);
+      }
+
+      if (!visualizerConnectedRef.current) {
+        sourceNodeRef.current.connect(analyzerRef.current);
+        analyzerRef.current.connect(audioContext.destination);
+        visualizerConnectedRef.current = true;
+      }
+
+      drawVisualizer();
+    } catch (error) {
+      console.error("Visualizer setup error:", error);
+    }
   };
 
   const drawVisualizer = () => {
@@ -112,145 +527,303 @@ export default function PlayerPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const bufferLength = analyzerRef.current.frequencyBinCount;
+    const analyzer = analyzerRef.current;
+    const bufferLength = analyzer.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const waveformArray = new Uint8Array(bufferLength);
 
     const draw = () => {
       if (!playing) return;
+      animationFrameRef.current = requestAnimationFrame(draw);
 
-      requestAnimationFrame(draw);
+      const nextWidth = canvas.clientWidth || 1;
+      const nextHeight = canvas.clientHeight || 1;
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
 
-      analyzerRef.current!.getByteFrequencyData(dataArray);
+      analyzer.getByteFrequencyData(dataArray);
+      analyzer.getByteTimeDomainData(waveformArray);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "rgba(255, 92, 104, 0.04)");
+      gradient.addColorStop(0.5, "rgba(229, 9, 20, 0.06)");
+      gradient.addColorStop(1, "rgba(12, 15, 25, 0.35)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+      const mirroredBarCount = 64;
+      const sampleStep = Math.max(1, Math.floor(bufferLength / mirroredBarCount));
+      const barGap = canvas.width / mirroredBarCount;
+      const halfHeight = canvas.height / 2;
 
-        const hue = (i / bufferLength) * 120 + 140;
-        ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.8)`;
+      for (let i = 0; i < mirroredBarCount; i++) {
+        const value = dataArray[i * sampleStep] / 255;
+        const barHeight = Math.max(2, value * (canvas.height * 0.38));
+        const barWidth = Math.max(2, barGap - 2);
+        const x = i * barGap + 1;
 
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
+        const hueShift = 356 - (i / mirroredBarCount) * 20;
+        ctx.fillStyle = `hsla(${hueShift}, 100%, 60%, 0.86)`;
+        ctx.fillRect(x, halfHeight - barHeight - 1, barWidth, barHeight);
+        ctx.fillRect(x, halfHeight + 1, barWidth, barHeight);
       }
+
+      ctx.beginPath();
+      const sliceWidth = canvas.width / bufferLength;
+      let waveX = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const normalized = waveformArray[i] / 128 - 1;
+        const y = halfHeight + normalized * (canvas.height * 0.14);
+        if (i === 0) {
+          ctx.moveTo(waveX, y);
+        } else {
+          ctx.lineTo(waveX, y);
+        }
+        waveX += sliceWidth;
+      }
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      const averageLevel = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+      const normalizedAverage = averageLevel / 255;
+      ctx.fillStyle = `rgba(229, 9, 20, ${0.12 + normalizedAverage * 0.22})`;
+      ctx.fillRect(0, halfHeight - 2, canvas.width, 4);
     };
 
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
     draw();
   };
 
   const loadAudio = async () => {
+    setLoading(true);
     try {
+      if (!Number.isFinite(audioId)) {
+        toast.error("Invalid audio ID");
+        setAudioUrl(null);
+        return;
+      }
+
       const response = await fetch(`/api/audio/${audioId}`);
 
       if (!response.ok) {
         toast.error("Failed to load audio");
+        setAudioUrl(null);
         return;
       }
 
-      const data = await response.json();
-      setAudioUrl(data.blobUrl);
+      const data: AudioFile = await response.json();
+      const playbackUrl = !data.blobUrl
+        ? null
+        : data.blobUrl.startsWith("/api/audio/proxy?url=")
+          ? data.blobUrl
+          : `/api/audio/proxy?url=${encodeURIComponent(data.blobUrl)}`;
+      setAudioUrl(playbackUrl);
       setAudioData(data);
+      setSelectedVoiceId(data.voiceId);
+      setSelectedVoiceName(data.voiceName);
+      setDuration(data.duration || 0);
+      lastSavedSecondRef.current = -1;
 
-      // Load article info
-      const articleRes = await fetch(`/api/article/${data.articleId}`);
-      if (articleRes.ok) {
-        const articleData = await articleRes.json();
-        setArticle(articleData);
-
-        // Load all audio versions
-        const versionsRes = await fetch(`/api/audio/list/${data.articleId}`);
-        if (versionsRes.ok) {
-          const versions = await versionsRes.json();
-          setAllAudioVersions(versions);
-        }
+      // Hand off from sticky player to this full player if we're opening the same track.
+      if (stickyTrack?.id === data.id) {
+        handoffTimeRef.current = stickyCurrentTime;
+        handoffShouldAutoplayRef.current = stickyIsPlaying;
+        pauseSticky();
+      } else {
+        handoffTimeRef.current = null;
+        handoffShouldAutoplayRef.current = false;
       }
 
-      setLoading(false);
+      const [articleRes, versionsRes] = await Promise.all([
+        fetch(`/api/article/${data.articleId}`),
+        fetch(`/api/audio/list/${data.articleId}`),
+      ]);
+
+      if (articleRes.ok) {
+        const articleData: Article = await articleRes.json();
+        setArticle(articleData);
+      } else {
+        setArticle(null);
+      }
+
+      if (versionsRes.ok) {
+        const versions: AudioFile[] = await versionsRes.json();
+        setAllAudioVersions(versions);
+      } else {
+        setAllAudioVersions([]);
+      }
     } catch (error) {
+      console.error("Load audio error:", error);
       toast.error("Failed to load audio");
+      setAudioUrl(null);
+    } finally {
       setLoading(false);
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
 
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
+    if (audioRef.current.paused) {
+      setIsBuffering(true);
+      try {
+        await setupVisualizer();
+        await audioRef.current.play();
+      } catch (error) {
+        console.error("Play error:", error);
+        setIsBuffering(false);
+        toast.error("Unable to play audio right now.");
+      }
+      return;
     }
-    setPlaying(!playing);
+
+    audioRef.current.pause();
   };
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+      const nextTime = audioRef.current.currentTime;
+      setCurrentTime(nextTime);
+
+      const roundedSecond = Math.floor(nextTime);
+      if (roundedSecond !== lastSavedSecondRef.current) {
+        lastSavedSecondRef.current = roundedSecond;
+        persistListeningProgress(audioId, nextTime);
+      }
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      const safeDuration = Number.isFinite(audioRef.current.duration)
+        ? audioRef.current.duration
+        : (audioData?.duration || 0);
+      setDuration(safeDuration);
+
+      let didApplyHandoff = false;
+      if (handoffTimeRef.current !== null && Number.isFinite(handoffTimeRef.current)) {
+        const handoffTime = clamp(handoffTimeRef.current, 0, Math.max(0, safeDuration));
+        audioRef.current.currentTime = handoffTime;
+        setCurrentTime(handoffTime);
+        lastSavedSecondRef.current = Math.floor(handoffTime);
+        didApplyHandoff = true;
+      }
+
+      try {
+        const saved = Number(localStorage.getItem(getListeningProgressStorageKey(audioId)));
+        if (
+          Number.isFinite(saved) &&
+          saved > 1 &&
+          saved < Math.max(1, safeDuration - 2) &&
+          !didApplyHandoff
+        ) {
+          audioRef.current.currentTime = saved;
+          setCurrentTime(saved);
+          lastSavedSecondRef.current = Math.floor(saved);
+        }
+      } catch {
+        // Ignore localStorage read errors.
+      }
+
+      const shouldAutoplayAfterHandoff = handoffShouldAutoplayRef.current;
+      handoffTimeRef.current = null;
+      handoffShouldAutoplayRef.current = false;
+
+      if (shouldAutoplayAfterHandoff) {
+        setIsBuffering(true);
+        void audioRef.current.play().catch((error) => {
+          console.error("Playback handoff error:", error);
+          setIsBuffering(false);
+        });
+      }
     }
   };
 
   const handleEnded = () => {
     setPlaying(false);
+    setIsBuffering(false);
     setCurrentTime(0);
+    clearSavedListeningProgress(audioId);
   };
 
   const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00";
+    if (!Number.isFinite(time) || time < 0) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const seekTo = (time: number) => {
+    if (!audioRef.current) return;
+    const safeDuration = Number.isFinite(duration) && duration > 0
+      ? duration
+      : (Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : time);
+    const nextTime = clamp(time, 0, safeDuration);
+    audioRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    lastSavedSecondRef.current = Math.floor(nextTime);
+    persistListeningProgress(audioId, nextTime);
+  };
+
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
+    seekTo(parseFloat(e.target.value));
+  };
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percentage = (e.clientX - rect.left) / rect.width;
+    seekTo(percentage * duration);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value);
+    const vol = clamp(parseFloat(e.target.value), 0, 1);
     setVolume(vol);
-    if (audioRef.current) {
-      audioRef.current.volume = vol;
-    }
-    if (vol === 0) {
-      setMuted(true);
-    } else {
+    if (vol > 0) {
+      lastVolumeBeforeMuteRef.current = vol;
       setMuted(false);
+    } else {
+      setMuted(true);
     }
   };
 
   const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !muted;
-      setMuted(!muted);
+    if (muted || volume === 0) {
+      const restored = lastVolumeBeforeMuteRef.current > 0 ? lastVolumeBeforeMuteRef.current : 0.7;
+      setVolume(restored);
+      setMuted(false);
+      return;
     }
+
+    lastVolumeBeforeMuteRef.current = volume;
+    setMuted(true);
   };
 
   const skip = (seconds: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + seconds));
-    }
+    if (!audioRef.current) return;
+    const current = audioRef.current.currentTime;
+    const safeDuration = duration > 0 ? duration : audioRef.current.duration;
+    const upperBound = Number.isFinite(safeDuration) ? safeDuration : current + seconds;
+    const nextTime = clamp(current + seconds, 0, upperBound);
+    audioRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    lastSavedSecondRef.current = Math.floor(nextTime);
+    persistListeningProgress(audioId, nextTime);
   };
 
   const handleDownload = async () => {
-    if (!audioUrl) return;
+    const originalAudioUrl = audioData?.blobUrl;
+    if (!originalAudioUrl) return;
 
     try {
-      const response = await fetch(audioUrl);
+      const response = await fetch(`/api/audio/proxy?url=${encodeURIComponent(originalAudioUrl)}`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -264,6 +837,55 @@ export default function PlayerPage() {
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download audio");
+    }
+  };
+
+  const handleRegenerateImage = async () => {
+    if (!article?.id) return;
+
+    setRegeneratingImage(true);
+    setArticle((prev) => (prev ? { ...prev, imageGenerationStatus: "generating", imageGenerationError: null } : prev));
+
+    try {
+      const response = await fetch("/api/article/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          articleId: article.id,
+          regenerate: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to regenerate cover image");
+      }
+
+      const refreshedArticleResponse = await fetch(`/api/article/${article.id}`);
+      if (refreshedArticleResponse.ok) {
+        const refreshedArticle: Article = await refreshedArticleResponse.json();
+        setArticle(refreshedArticle);
+      } else {
+        setArticle((prev) => (
+          prev
+            ? {
+                ...prev,
+                generatedImageUrl: data.imageUrl || prev.generatedImageUrl || null,
+                imageGenerationStatus: "completed",
+                imageGenerationError: null,
+              }
+            : prev
+        ));
+      }
+
+      toast.success("Cover image regenerated");
+    } catch (error) {
+      console.error("Regenerate image error:", error);
+      setArticle((prev) => (prev ? { ...prev, imageGenerationStatus: "failed" } : prev));
+      toast.error(error instanceof Error ? error.message : "Failed to regenerate cover image");
+    } finally {
+      setRegeneratingImage(false);
     }
   };
 
@@ -297,7 +919,18 @@ export default function PlayerPage() {
       }
 
       // Step 2: Redirect to generation page
-      router.push(`/generate/${article.id}?voiceId=${selectedVoiceId}`);
+      const generationParams = new URLSearchParams({
+        voiceId: selectedVoiceId,
+        skipEnhancement: (!enableScriptEnhancement).toString(),
+        stability: stability.toString(),
+        similarityBoost: similarityBoost.toString(),
+        style: style.toString(),
+        useSpeakerBoost: useSpeakerBoost.toString(),
+      });
+      if (selectedVoiceName.trim()) {
+        generationParams.set("voiceName", selectedVoiceName.trim());
+      }
+      router.push(`/generate/${article.id}?${generationParams.toString()}`);
       toast.success("Regenerating audio...");
     } catch (error) {
       console.error("Regeneration error:", error);
@@ -318,6 +951,8 @@ export default function PlayerPage() {
       if (!response.ok) {
         throw new Error("Failed to delete audio");
       }
+
+      clearSavedListeningProgress(audioId);
 
       toast.success("Audio deleted");
 
@@ -381,6 +1016,16 @@ export default function PlayerPage() {
     });
   };
 
+  const progressPercentage = duration > 0 ? clamp((currentTime / duration) * 100, 0, 100) : 0;
+  const remainingTime = Math.max(0, duration - currentTime);
+  const articleCoverImage = hasPersistentGeneratedImage(article?.generatedImageUrl)
+    ? article?.generatedImageUrl || null
+    : article?.imageUrl || null;
+  const articleTitle = article?.title?.trim() || "Untitled Article";
+  const articleSourceType = article?.sourceType
+    ? `${article.sourceType.charAt(0).toUpperCase()}${article.sourceType.slice(1)}`
+    : "Article";
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#141414] relative overflow-hidden flex items-center justify-center">
@@ -418,7 +1063,7 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] relative overflow-hidden p-4 pt-16">
+    <div className="relative min-h-screen overflow-hidden bg-[#141414] px-3 pb-10 pt-16 sm:px-5">
       {/* Netflix Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
@@ -439,340 +1084,494 @@ export default function PlayerPage() {
         ))}
       </div>
 
-      <div className="relative max-w-5xl mx-auto py-8">
-        {/* Article Info Section */}
-        {article && (
-          <div className="bg-black/60 backdrop-blur-xl border border-gray-800/50 rounded-2xl p-6 mb-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {article.title}
-                </h2>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-white/50">
-                  <span>{article.wordCount} words</span>
-                  <span>•</span>
-                  <span>{article.sourceType}</span>
-                  <span>•</span>
-                  <span>{formatDate(article.createdAt)}</span>
-                </div>
-              </div>
-              {allAudioVersions.length > 1 && (
-                <div className="px-3 py-1 rounded-full bg-[#e50914]/10 border border-[#e50914]/20 text-[#e50914] text-sm">
-                  {allAudioVersions.length} versions
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="bg-black/60 backdrop-blur-xl border border-gray-800/50 rounded-3xl p-6 sm:p-10 md:p-14 shadow-2xl">
-          <div className="space-y-8 sm:space-y-12">
-            {/* Header with Audio Info */}
-            <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e50914]/10 border border-[#e50914]/20">
-                <div className="w-2 h-2 rounded-full bg-[#e50914] animate-pulse" />
-                <span className="text-sm font-medium text-[#e50914]">
-                  {playing ? "Now Playing" : "Ready"}
-                </span>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight">
-                {audioData?.voiceName || "Audio Player"}
-              </h1>
-
-              {/* Audio Stats */}
-              <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-white/50">
-                <div className="flex items-center gap-2">
-                  <span>Duration:</span>
-                  <span className="text-[#e50914]">{formatTime(duration)}</span>
-                </div>
-                {audioData?.fileSize && (
-                  <>
-                    <div className="w-px h-4 bg-white/20" />
-                    <div className="flex items-center gap-2">
-                      <span>Size:</span>
-                      <span className="text-[#e50914]">{formatFileSize(audioData.fileSize)}</span>
-                    </div>
-                  </>
-                )}
-                <div className="w-px h-4 bg-white/20" />
-                <div className="flex items-center gap-2">
-                  <span>Speed:</span>
-                  <span className="text-[#e50914]">{playbackRate}x</span>
-                </div>
-              </div>
-            </div>
-
-            <audio
-              ref={audioRef}
-              src={audioUrl ? `/api/audio/proxy?url=${encodeURIComponent(audioUrl)}` : undefined}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={handleEnded}
-              onError={(e) => {
-                console.error("Audio playback error:", e);
-                toast.error("Failed to load audio. Please try downloading instead.");
-              }}
-              crossOrigin="anonymous"
-              preload="metadata"
-            />
-
-            {/* Visualizer */}
-            <div className="relative h-32 sm:h-40 md:h-48 rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={200}
-                className="w-full h-full"
+      <div className="relative mx-auto max-w-6xl py-6 sm:py-8">
+        <div className="space-y-8 sm:space-y-10">
+          <section className="seamless-panel relative overflow-hidden rounded-[40px]">
+            {articleCoverImage ? (
+              <div
+                className="absolute inset-0 opacity-45 bg-cover bg-center scale-110 blur-[3px]"
+                style={{ backgroundImage: `url(${articleCoverImage})` }}
               />
-              {!playing && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-white/30 text-sm sm:text-base">Audio visualizer will appear during playback</div>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(229,9,20,0.35),transparent_45%),linear-gradient(165deg,#0e1118,#1b2130)]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/84 via-black/72 to-black/88" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.3),transparent_45%)]" />
 
-            {/* Main Controls */}
-            <div className="space-y-6 sm:space-y-8">
-              {/* Play/Pause and Skip Controls */}
-              <div className="flex items-center justify-center gap-4 sm:gap-6">
-                <button
-                  onClick={() => skip(-10)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
-                >
-                  <SkipBack className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#e50914] transition-colors" />
-                </button>
-
-                <button
-                  onClick={togglePlay}
-                  className="relative group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-[#e50914] hover:bg-[#f40612] transition-all hover:scale-105 shadow-2xl shadow-[#e50914]/30 hover:shadow-[#e50914]/50"
-                >
-                  <div className="absolute inset-0 rounded-full bg-[#e50914] blur-2xl opacity-50 group-hover:opacity-75 transition-opacity" />
-                  <div className="relative flex items-center justify-center w-full h-full">
-                    {playing ? (
-                      <Pause className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-white" fill="white" />
-                    ) : (
-                      <Play className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-white ml-1 sm:ml-2" fill="white" />
+            <div className="relative px-4 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-7 lg:px-9">
+              <div className="grid gap-6 lg:grid-cols-[1.25fr_0.95fr] lg:items-start">
+                <div className="seamless-media-frame relative mx-auto aspect-[3/4] w-full max-w-[20rem] overflow-hidden rounded-[30px] sm:max-w-[24rem] lg:mx-0 lg:max-w-[28rem]">
+                  {articleCoverImage ? (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${articleCoverImage})` }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(229,9,20,0.38),transparent_48%),linear-gradient(145deg,#0f1218,#1d2533)]" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+                  <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#e50914]/10 border border-[#e50914]/30 px-3 py-1.5 backdrop-blur-md">
+                      <div className={`w-2 h-2 rounded-full ${isBuffering ? "bg-amber-400 animate-pulse" : "bg-[#e50914] animate-pulse"}`} />
+                      <span className="text-xs font-semibold tracking-[0.08em] text-[#ff4c54] uppercase">
+                        {isBuffering ? "Buffering" : playing ? "Now Playing" : "Ready"}
+                      </span>
+                    </div>
+                    {allAudioVersions.length > 1 && (
+                      <div className="rounded-full border border-white/25 bg-black/55 px-3 py-1 text-xs text-white/80 backdrop-blur-md">
+                        {allAudioVersions.length} versions
+                      </div>
                     )}
                   </div>
-                </button>
+                </div>
 
-                <button
-                  onClick={() => skip(10)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
-                >
-                  <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 group-hover:text-[#e50914] transition-colors" />
-                </button>
-              </div>
+                <div className="space-y-5 lg:pb-2">
+                  <div className="space-y-2">
+                    <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-white/58">
+                      {audioData?.voiceName || "Voice narration"}
+                    </p>
+                    <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[0.92] text-white tracking-[0.02em]">
+                      {articleTitle}
+                    </h1>
+                  </div>
 
-              {/* Progress Bar with Time */}
-              <div className="space-y-3">
-                <div className="relative group">
-                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#e50914] rounded-full transition-all relative"
-                      style={{ width: `${(currentTime / duration) * 100}%` }}
+                  <div className="seamless-subpanel space-y-5 rounded-[24px] p-4 sm:p-5">
+                    {/* Visualizer */}
+                    <div className="seamless-media-frame relative h-32 overflow-hidden rounded-[20px] sm:h-36">
+                      <div
+                        className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(229,9,20,0.18),transparent_60%)] transition-opacity duration-300 ${
+                          playing ? "opacity-100" : "opacity-60"
+                        }`}
+                      />
+                      <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/55">
+                        <span className={`h-1.5 w-1.5 rounded-full ${playing ? "bg-[#e50914] animate-pulse" : "bg-white/35"}`} />
+                        Visualizer
+                      </div>
+                      <canvas
+                        ref={canvasRef}
+                        width={800}
+                        height={200}
+                        className="absolute inset-0 h-full w-full"
+                      />
+                      {!playing && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="rounded-full border border-white/10 bg-black/45 px-4 py-2 text-xs text-white/45 sm:text-sm">
+                            {isBuffering ? "Buffering audio..." : "Audio visualizer will appear during playback"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Main Controls */}
+                    <div className="space-y-5 sm:space-y-6">
+                      <div className="flex items-center justify-center gap-4 sm:gap-6">
+                        <button
+                          onClick={() => skip(-10)}
+                          className="group flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10 sm:h-12 sm:w-12"
+                          aria-label="Rewind 10 seconds"
+                        >
+                          <SkipBack className="h-5 w-5 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                        </button>
+
+                        <button
+                          onClick={togglePlay}
+                          className="relative group h-16 w-16 rounded-full bg-[#e50914] shadow-2xl shadow-[#e50914]/35 transition-all hover:scale-105 hover:bg-[#f40612] hover:shadow-[#e50914]/55 sm:h-20 sm:w-20 md:h-24 md:w-24"
+                          aria-label={playing ? "Pause audio" : "Play audio"}
+                        >
+                          <div className={`pointer-events-none absolute -inset-2 rounded-full border border-dashed border-[#ff4c54]/55 ${playing ? "animate-orbit" : "opacity-35"}`} />
+                          <div className={`pointer-events-none absolute -inset-4 rounded-full border border-dashed border-[#e50914]/28 ${playing ? "animate-orbit-reverse" : "opacity-20"}`} />
+                          <div className="absolute inset-0 rounded-full bg-[#e50914] blur-2xl opacity-50 transition-opacity group-hover:opacity-75" />
+                          <div className="relative flex h-full w-full items-center justify-center">
+                            {isBuffering ? (
+                              <Loader2 className="h-8 w-8 animate-spin text-white sm:h-10 sm:w-10" />
+                            ) : playing ? (
+                              <Pause className="h-8 w-8 text-white sm:h-10 sm:w-10 md:h-12 md:w-12" fill="white" />
+                            ) : (
+                              <Play className="ml-0.5 h-8 w-8 text-white sm:ml-1 sm:h-10 sm:w-10 md:h-12 md:w-12" fill="white" />
+                            )}
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => skip(10)}
+                          className="group flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10 sm:h-12 sm:w-12"
+                          aria-label="Forward 10 seconds"
+                        >
+                          <SkipForward className="h-5 w-5 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="group relative" onClick={handleTimelineClick}>
+                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                            <div
+                              className="relative h-full rounded-full bg-[#e50914] transition-all"
+                              style={{ width: `${progressPercentage}%` }}
+                            >
+                              <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max={duration || 0}
+                            value={currentTime}
+                            onChange={handleSeek}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                            aria-label="Seek audio timeline"
+                          />
+                          <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="whitespace-nowrap rounded-lg border border-[#e50914]/30 bg-black/90 px-3 py-1 text-xs text-white">
+                              {formatTime(currentTime)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between font-mono text-xs text-white/60 sm:text-sm">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>-{formatTime(remainingTime)}</span>
+                          <span>{formatTime(duration)}</span>
+                        </div>
+                      </div>
+
+                      <div className="seamless-subpanel space-y-2 rounded-[18px] px-3 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            onClick={toggleMute}
+                            className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10"
+                            aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                          >
+                            {muted || volume === 0 ? (
+                              <VolumeX className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                            ) : (
+                              <Volume2 className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                            )}
+                          </button>
+
+                          <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
+                              style={{ width: `${muted ? 0 : volume * 100}%` }}
+                            />
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.01"
+                              value={muted ? 0 : volume}
+                              onChange={handleVolumeChange}
+                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                              aria-label="Volume"
+                            />
+                          </div>
+                          <span className="w-9 shrink-0 text-right font-mono text-[11px] text-white/55">
+                            {Math.round((muted ? 0 : volume) * 100)}%
+                          </span>
+
+                          <button
+                            onClick={() => setShowSpeedControls((prev) => !prev)}
+                            aria-expanded={showSpeedControls}
+                            aria-label={showSpeedControls ? "Hide playback speeds" : "Show playback speeds"}
+                            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/75 transition-all hover:bg-white/10"
+                          >
+                            {playbackRate}x
+                            {showSpeedControls ? (
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {showSpeedControls && (
+                          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                            {PLAYBACK_RATES.map((speed) => (
+                              <button
+                                key={speed}
+                                onClick={() => {
+                                  setPlaybackRate(speed);
+                                  setShowSpeedControls(false);
+                                }}
+                                aria-label={`Set speed to ${speed}x`}
+                                className={`h-8 rounded-md px-2 text-[11px] font-medium transition-all ${
+                                  playbackRate === speed
+                                    ? "bg-[#e50914] text-white shadow-lg shadow-[#e50914]/25"
+                                    : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                                }`}
+                              >
+                                {speed}x
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-white/80">
+                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                      {article?.wordCount ? `${article.wordCount.toLocaleString()} words` : "Article"}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                      {articleSourceType}
+                    </span>
+                    {article?.createdAt && (
+                      <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                        {formatDate(article.createdAt)}
+                      </span>
+                    )}
+                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                      {formatTime(duration)}
+                    </span>
+                    {audioData?.fileSize && (
+                      <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                        {formatFileSize(audioData.fileSize)}
+                      </span>
+                    )}
+                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                      {playbackRate}x
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
+                      {regeneratingImage || article?.imageGenerationStatus === "generating"
+                        ? "AI cover generating"
+                        : hasPersistentGeneratedImage(article?.generatedImageUrl)
+                          ? "AI cover ready"
+                          : "Source cover"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <button
+                      onClick={() => setShowKeyboardHelp((prev) => !prev)}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white/75 transition-colors hover:bg-white/10 hover:text-white"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                    </div>
+                      <Keyboard className="w-3.5 h-3.5" />
+                      Keyboard Shortcuts
+                    </button>
+                    {showKeyboardHelp && (
+                      <div className="seamless-subpanel mt-3 max-w-xl rounded-xl px-4 py-3 text-left text-xs text-white/70">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          <span><kbd className="text-white">Space / K</kbd> Play/Pause</span>
+                          <span><kbd className="text-white">J / L</kbd> -10s / +10s</span>
+                          <span><kbd className="text-white">Left / Right</kbd> Seek</span>
+                          <span><kbd className="text-white">M</kbd> Mute/Unmute</span>
+                          <span><kbd className="text-white">[ / ]</kbd> Speed down/up</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 0}
-                    value={currentTime}
-                    onChange={handleSeek}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div className="px-3 py-1 rounded-lg bg-black/90 border border-[#e50914]/30 text-xs text-white whitespace-nowrap">
-                      {formatTime(currentTime)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-sm sm:text-base text-white/60 font-mono">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration)}</span>
                 </div>
               </div>
+            </div>
+          </section>
 
-              {/* Additional Controls */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10">
-                {/* Volume Control */}
-                <div className="flex items-center gap-3">
+          <audio
+            ref={audioRef}
+            src={audioUrl || undefined}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onEnded={handleEnded}
+            onPlay={() => {
+              setPlaying(true);
+              void setupVisualizer();
+            }}
+            onPause={() => {
+              setPlaying(false);
+              if (audioRef.current && Number.isFinite(audioRef.current.currentTime)) {
+                persistListeningProgress(audioId, audioRef.current.currentTime);
+              }
+            }}
+            onWaiting={() => setIsBuffering(true)}
+            onCanPlay={() => setIsBuffering(false)}
+            onPlaying={() => setIsBuffering(false)}
+            onError={(e) => {
+              console.error("Audio playback error:", e);
+              setIsBuffering(false);
+              setPlaying(false);
+              toast.error("Failed to load audio. Please try downloading instead.");
+            }}
+            crossOrigin="anonymous"
+            preload="metadata"
+          />
+
+          <section className="relative space-y-6">
+            {!showActionsCard ? (
+              <div className="seamless-panel animate-action-card-flip rounded-[32px] p-4 sm:p-6 md:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/45">
+                      Compact Controls
+                    </p>
+                    <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                      Audio actions are hidden
+                    </h2>
+                    <p className="max-w-md text-sm text-white/65">
+                      Click the gear icon to flip this card and open regenerate, download, library, and delete actions.
+                    </p>
+                  </div>
                   <button
-                    onClick={toggleMute}
-                    onMouseEnter={() => setShowVolumeSlider(true)}
-                    onMouseLeave={() => setTimeout(() => setShowVolumeSlider(false), 200)}
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 transition-all flex items-center justify-center group"
+                    onClick={handleActionsCardToggle}
+                    className="group flex h-12 w-12 items-center justify-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/15 transition-all hover:bg-[#e50914]/22"
+                    aria-label="Open action controls"
+                    title="Open action controls"
                   >
-                    {muted || volume === 0 ? (
-                      <VolumeX className="w-5 h-5 text-white/70 group-hover:text-[#e50914] transition-colors" />
+                    <Settings2 className="h-5 w-5 text-[#ff4c54] transition-transform duration-300 group-hover:rotate-90" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="seamless-panel animate-action-card-flip space-y-6 rounded-[32px] p-4 sm:p-6 md:p-7">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/45">
+                      Audio Actions
+                    </p>
+                    <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                      Manage this audio card
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleActionsCardToggle}
+                    className="group flex h-12 w-12 items-center justify-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/15 transition-all hover:bg-[#e50914]/22"
+                    aria-label="Close action controls"
+                    title="Close action controls"
+                  >
+                    <Settings2 className="h-5 w-5 text-[#ff4c54] transition-transform duration-300 group-hover:-rotate-90" />
+                  </button>
+                </div>
+
+                {/* Regeneration Panel */}
+                <div>
+                  <button
+                    onClick={() => setShowRegeneratePanel(!showRegeneratePanel)}
+                    className="group flex w-full items-center justify-between rounded-2xl border border-[#e50914]/15 bg-[#e50914]/[0.07] p-4 transition-all hover:bg-[#e50914]/[0.12]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <RefreshCw className="h-5 w-5 text-[#e50914]" />
+                      <span className="font-semibold text-white">Regenerate Audio</span>
+                    </div>
+                    {showRegeneratePanel ? (
+                      <ChevronUp className="h-5 w-5 text-white/50 transition-colors group-hover:text-[#e50914]" />
                     ) : (
-                      <Volume2 className="w-5 h-5 text-white/70 group-hover:text-[#e50914] transition-colors" />
+                      <ChevronDown className="h-5 w-5 text-white/50 transition-colors group-hover:text-[#e50914]" />
                     )}
                   </button>
 
-                  {showVolumeSlider && (
-                    <div
-                      className="relative w-24 h-1.5 bg-white/10 rounded-full overflow-hidden"
-                      onMouseEnter={() => setShowVolumeSlider(true)}
-                      onMouseLeave={() => setShowVolumeSlider(false)}
-                    >
-                      <div
-                        className="absolute inset-y-0 left-0 bg-[#e50914] rounded-full"
-                        style={{ width: `${volume * 100}%` }}
+                  {showRegeneratePanel && (
+                    <div className="seamless-subpanel mt-6 space-y-6 rounded-2xl p-6 animate-fadeIn">
+                      <VoiceSelector
+                        selectedVoiceId={selectedVoiceId}
+                        onVoiceSelect={(voiceId, voiceName) => {
+                          setSelectedVoiceId(voiceId);
+                          setSelectedVoiceName(voiceName);
+                        }}
+                        placeholder="Select a voice..."
                       />
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={volume}
-                        onChange={handleVolumeChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+
+                      <AudioSettingsPanel
+                        stability={stability}
+                        onStabilityChange={setStability}
+                        similarityBoost={similarityBoost}
+                        onSimilarityBoostChange={setSimilarityBoost}
+                        style={style}
+                        onStyleChange={setStyle}
+                        useSpeakerBoost={useSpeakerBoost}
+                        onUseSpeakerBoostChange={setUseSpeakerBoost}
+                        enableScriptEnhancement={enableScriptEnhancement}
+                        onEnableScriptEnhancementChange={setEnableScriptEnhancement}
                       />
+
+                      <div className="seamless-subpanel flex items-center gap-3 rounded-xl p-4">
+                        <input
+                          type="checkbox"
+                          id="keepOldVersion"
+                          checked={keepOldVersion}
+                          onChange={(e) => setKeepOldVersion(e.target.checked)}
+                          className="h-5 w-5 rounded border-white/20 bg-white/5"
+                        />
+                        <label htmlFor="keepOldVersion" className="text-sm text-white">
+                          Keep current version (create new audio file)
+                        </label>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowRegeneratePanel(false)}
+                          className="flex-1 border-white/20 bg-white/5 text-white hover:bg-white/10"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleRegenerate}
+                          loading={regenerating}
+                          disabled={regenerating || !selectedVoiceId}
+                          className="flex-1 netflix-button netflix-button-primary"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Generate New Audio
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Playback Speed */}
-                <div className="flex items-center gap-2">
-                  {[0.5, 1, 1.5, 2].map((speed) => (
-                    <button
-                      key={speed}
-                      onClick={() => setPlaybackRate(speed)}
-                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                        playbackRate === speed
-                          ? "bg-[#e50914] text-white shadow-lg shadow-[#e50914]/30"
-                          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
-                      }`}
-                    >
-                      {speed}x
-                    </button>
-                  ))}
+                {/* Action Buttons */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                  <Button
+                    onClick={handleRegenerateImage}
+                    loading={regeneratingImage}
+                    disabled={regeneratingImage || !article}
+                    className="netflix-button netflix-button-secondary h-12 rounded-xl font-semibold sm:h-14"
+                  >
+                    {!regeneratingImage && <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />}
+                    {regeneratingImage ? "Regenerating..." : "Regenerate Cover"}
+                  </Button>
+
+                  <Button
+                    onClick={handleDownload}
+                    className="netflix-button netflix-button-primary h-12 rounded-xl text-sm font-bold sm:h-14 sm:text-base"
+                  >
+                    <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    Download
+                  </Button>
+
+                  <Button
+                    onClick={() => router.push("/library")}
+                    className="netflix-button netflix-button-secondary h-12 rounded-xl font-semibold sm:h-14"
+                  >
+                    <Library className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    Library
+                  </Button>
                 </div>
-              </div>
-            </div>
 
-            {/* Regeneration Panel */}
-            <div className="border-t border-white/10 pt-6">
-              <button
-                onClick={() => setShowRegeneratePanel(!showRegeneratePanel)}
-                className="w-full flex items-center justify-between p-4 bg-[#e50914]/5 hover:bg-[#e50914]/10 border border-[#e50914]/20 rounded-xl transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <RefreshCw className="w-5 h-5 text-[#e50914]" />
-                  <span className="text-white font-semibold">Regenerate Audio</span>
-                </div>
-                {showRegeneratePanel ? (
-                  <ChevronUp className="w-5 h-5 text-white/50 group-hover:text-[#e50914] transition-colors" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-white/50 group-hover:text-[#e50914] transition-colors" />
-                )}
-              </button>
-
-              {showRegeneratePanel && (
-                <div className="mt-6 p-6 bg-black/40 border border-white/10 rounded-xl space-y-6 animate-fadeIn">
-                  <VoiceSelector
-                    selectedVoiceId={selectedVoiceId}
-                    onVoiceSelect={(voiceId) => setSelectedVoiceId(voiceId)}
-                    placeholder="Select a voice..."
-                  />
-
-                  <AudioSettingsPanel
-                    stability={stability}
-                    onStabilityChange={setStability}
-                    similarityBoost={similarityBoost}
-                    onSimilarityBoostChange={setSimilarityBoost}
-                    style={style}
-                    onStyleChange={setStyle}
-                    useSpeakerBoost={useSpeakerBoost}
-                    onUseSpeakerBoostChange={setUseSpeakerBoost}
-                  />
-
-                  <div className="flex items-center gap-3 p-4 bg-black/40 rounded-lg border border-white/10">
-                    <input
-                      type="checkbox"
-                      id="keepOldVersion"
-                      checked={keepOldVersion}
-                      onChange={(e) => setKeepOldVersion(e.target.checked)}
-                      className="w-5 h-5 rounded border-white/20 bg-white/5"
-                    />
-                    <label htmlFor="keepOldVersion" className="text-sm text-white">
-                      Keep current version (create new audio file)
-                    </label>
-                  </div>
-
-                  <div className="flex gap-3">
+                {/* Danger Zone */}
+                <div className="soft-divider pt-6">
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
-                      variant="outline"
-                      onClick={() => setShowRegeneratePanel(false)}
-                      className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                      onClick={() => setShowDeleteAudioDialog(true)}
+                      variant="danger"
+                      className="flex-1 h-11"
                     >
-                      Cancel
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete This Audio
                     </Button>
                     <Button
-                      onClick={handleRegenerate}
-                      loading={regenerating}
-                      disabled={regenerating || !selectedVoiceId}
-                      className="flex-1 netflix-button netflix-button-primary"
+                      onClick={() => setShowDeleteArticleDialog(true)}
+                      variant="danger"
+                      className="flex-1 h-11"
                     >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Generate New Audio
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Article & All Audio
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-6 border-t border-white/10">
-              <Button
-                onClick={handleDownload}
-                className="netflix-button netflix-button-primary h-12 sm:h-14 rounded-xl font-bold text-sm sm:text-base"
-              >
-                <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Download
-              </Button>
-
-              <Button
-                onClick={() => router.push("/library")}
-                className="netflix-button netflix-button-secondary h-12 sm:h-14 rounded-xl font-semibold"
-              >
-                <Library className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Library
-              </Button>
-            </div>
-
-            {/* Danger Zone */}
-            <div className="border-t border-red-500/20 pt-6">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  onClick={() => setShowDeleteAudioDialog(true)}
-                  variant="danger"
-                  className="flex-1 h-11"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete This Audio
-                </Button>
-                <Button
-                  onClick={() => setShowDeleteArticleDialog(true)}
-                  variant="danger"
-                  className="flex-1 h-11"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Article & All Audio
-                </Button>
               </div>
-            </div>
+            )}
 
-            {/* Other Versions */}
             {allAudioVersions.length > 1 && (
-              <div className="border-t border-white/10 pt-6">
-                <h3 className="text-lg font-semibold text-white mb-4">
+              <div className="seamless-panel rounded-[32px] p-4 sm:p-6 md:p-7">
+                <h3 className="mb-4 text-lg font-semibold text-white">
                   Other Audio Versions ({allAudioVersions.length - 1})
                 </h3>
                 <div className="space-y-2">
@@ -782,21 +1581,23 @@ export default function PlayerPage() {
                       <button
                         key={version.id}
                         onClick={() => router.push(`/player/${version.id}`)}
-                        className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#e50914]/30 rounded-lg transition-all text-left"
+                        className="w-full rounded-xl border border-white/[0.06] bg-white/[0.04] p-4 text-left transition-all hover:border-[#e50914]/25 hover:bg-white/[0.08]"
                       >
-                        <div>
-                          <div className="text-white font-medium">{version.voiceName}</div>
-                          <div className="text-xs text-white/50 mt-1">
-                            {formatTime(version.duration)} • {formatFileSize(version.fileSize)} • {formatDate(version.createdAt)}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-white">{version.voiceName}</div>
+                            <div className="mt-1 text-xs text-white/50">
+                              {formatTime(version.duration)} • {formatFileSize(version.fileSize)} • {formatDate(version.createdAt)}
+                            </div>
                           </div>
+                          <Play className="h-5 w-5 text-[#e50914]" />
                         </div>
-                        <Play className="w-5 h-5 text-[#e50914]" />
                       </button>
                     ))}
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
 
@@ -824,6 +1625,85 @@ export default function PlayerPage() {
       />
 
       <style jsx>{`
+        .seamless-panel {
+          position: relative;
+          isolation: isolate;
+          background:
+            linear-gradient(145deg, rgba(10, 12, 18, 0.82) 0%, rgba(9, 12, 18, 0.66) 42%, rgba(20, 9, 12, 0.62) 100%),
+            radial-gradient(circle at 85% 12%, rgba(229, 9, 20, 0.16), transparent 42%);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          box-shadow:
+            0 30px 85px rgba(0, 0, 0, 0.55),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(22px);
+        }
+
+        .seamless-panel::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          background:
+            radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.13), transparent 54%),
+            radial-gradient(ellipse at 20% 88%, rgba(52, 96, 255, 0.08), transparent 50%);
+          mix-blend-mode: screen;
+          opacity: 0.55;
+        }
+
+        .seamless-panel::after {
+          content: "";
+          position: absolute;
+          inset: -32px;
+          z-index: -1;
+          border-radius: inherit;
+          pointer-events: none;
+          background:
+            radial-gradient(circle at 80% 16%, rgba(229, 9, 20, 0.2), transparent 56%),
+            radial-gradient(circle at 14% 84%, rgba(57, 114, 255, 0.13), transparent 54%);
+          filter: blur(20px);
+          opacity: 0.75;
+        }
+
+        .seamless-subpanel {
+          position: relative;
+          background:
+            linear-gradient(160deg, rgba(14, 16, 24, 0.72) 0%, rgba(8, 10, 16, 0.56) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 16px 42px rgba(0, 0, 0, 0.35);
+          backdrop-filter: blur(14px);
+        }
+
+        .seamless-media-frame {
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+            0 28px 60px rgba(0, 0, 0, 0.5);
+          background-color: rgba(0, 0, 0, 0.45);
+        }
+
+        .soft-divider {
+          position: relative;
+        }
+
+        .soft-divider::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(229, 9, 20, 0.46) 22%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(229, 9, 20, 0.26) 78%,
+            transparent 100%
+          );
+        }
+
         @keyframes float {
           0%, 100% {
             transform: translateY(0) translateX(0);
@@ -858,6 +1738,44 @@ export default function PlayerPage() {
         }
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes actionCardFlip {
+          from {
+            opacity: 0;
+            transform: perspective(1200px) rotateY(-72deg) translateX(10px);
+            transform-origin: right center;
+          }
+          to {
+            opacity: 1;
+            transform: perspective(1200px) rotateY(0deg) translateX(0);
+            transform-origin: right center;
+          }
+        }
+        .animate-action-card-flip {
+          animation: actionCardFlip 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+          backface-visibility: hidden;
+        }
+        @keyframes orbit {
+          0% {
+            transform: rotate(0deg) scale(1);
+          }
+          100% {
+            transform: rotate(360deg) scale(1);
+          }
+        }
+        @keyframes orbitReverse {
+          0% {
+            transform: rotate(360deg) scale(1);
+          }
+          100% {
+            transform: rotate(0deg) scale(1);
+          }
+        }
+        .animate-orbit {
+          animation: orbit 9s linear infinite;
+        }
+        .animate-orbit-reverse {
+          animation: orbitReverse 13s linear infinite;
         }
       `}</style>
     </div>

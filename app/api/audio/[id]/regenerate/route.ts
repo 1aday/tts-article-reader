@@ -4,13 +4,14 @@ import { audioFiles, articles } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { deleteAudio } from "@/lib/storage/blob-storage";
 import { z } from "zod";
+import { DEFAULT_VOICE_AUDIO_SETTINGS } from "@/lib/audio-settings";
 
 const regenerateSchema = z.object({
   voiceId: z.string(),
   deleteOld: z.boolean().optional().default(false),
-  stability: z.number().min(0).max(1).optional().default(0.5),
-  similarityBoost: z.number().min(0).max(1).optional().default(0.75),
-  style: z.number().min(0).max(1).optional().default(0),
+  stability: z.number().min(0).max(1).optional().default(DEFAULT_VOICE_AUDIO_SETTINGS.stability),
+  similarityBoost: z.number().min(0).max(1).optional().default(DEFAULT_VOICE_AUDIO_SETTINGS.similarityBoost),
+  style: z.number().min(0).max(1).optional().default(DEFAULT_VOICE_AUDIO_SETTINGS.style),
   useSpeakerBoost: z.boolean().optional().default(true),
 });
 

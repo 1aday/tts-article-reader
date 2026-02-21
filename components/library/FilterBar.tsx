@@ -97,8 +97,8 @@ export function FilterBar({
 
   if (loading) {
     return (
-      <div className="w-full py-4 flex items-center justify-center">
-        <div className="text-sm text-gray-400">Loading filters...</div>
+      <div className="flex w-full items-center justify-center py-4">
+        <div className="text-sm text-white/50">Loading filters...</div>
       </div>
     );
   }
@@ -108,13 +108,14 @@ export function FilterBar({
   }
 
   return (
-    <div className="relative w-full mb-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+    <div className="relative mb-8 w-full">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-[#e50914]">Filter Articles</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.11em] text-[#e50914]">
+            Filter Articles
+          </h3>
           {activeFilterCount > 0 && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-white/45">
               {activeFilterCount} active
             </span>
           )}
@@ -124,7 +125,7 @@ export function FilterBar({
             variant="ghost"
             size="sm"
             onClick={onClearAll}
-            className="h-8 text-xs text-gray-400 hover:text-red-500"
+            className="h-8 text-xs text-white/55 hover:text-[#e50914]"
           >
             <X className="h-3 w-3 mr-1" />
             Clear All
@@ -132,26 +133,22 @@ export function FilterBar({
         )}
       </div>
 
-      {/* Scrollable Filter Container */}
       <div className="relative group">
-        {/* Left Scroll Button */}
         {showLeftScroll && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#e50914]"
+            className="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#1c2534]/95 text-[#e50914] opacity-0 backdrop-blur-sm transition-opacity hover:border-[#e50914]/45 group-hover:opacity-100"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
         )}
 
-        {/* Scrollable Pills Container */}
         <div
           ref={scrollContainerRef}
           className="flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {/* Category Pills */}
           {categories.map((category) => {
             const isActive = activeCategories.includes(category.slug);
             return (
@@ -159,12 +156,12 @@ export function FilterBar({
                 key={`category-${category.id}`}
                 onClick={() => onCategoryToggle(category.slug)}
                 className={`
-                  flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium
-                  transition-all duration-300 border
+                  flex-shrink-0 rounded-full border px-4 py-2 text-xs font-medium
+                  transition-all duration-300
                   ${
                     isActive
-                      ? "bg-gradient-to-r from-[#e50914]/20 to-[#e50914]/20 border-[#e50914]/50 text-[#e50914] shadow-[0_0_20px_rgba(229,9,20,0.3)] scale-105"
-                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-[#e50914]/30 hover:scale-105"
+                      ? "scale-105 border-[#e50914]/60 bg-[#e50914]/15 text-[#e50914] shadow-[0_0_16px_rgba(229,9,20,0.35)]"
+                      : "border-white/15 bg-surface-1 text-white/70 hover:scale-105 hover:border-[#e50914]/45 hover:text-white"
                   }
                 `}
               >
@@ -176,7 +173,6 @@ export function FilterBar({
             );
           })}
 
-          {/* Tag Pills */}
           {tags.map((tag) => {
             const isActive = activeTags.includes(tag.slug);
             return (
@@ -184,12 +180,12 @@ export function FilterBar({
                 key={`tag-${tag.id}`}
                 onClick={() => onTagToggle(tag.slug)}
                 className={`
-                  flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium
-                  transition-all duration-300 border
+                  flex-shrink-0 rounded-full border px-4 py-2 text-xs font-medium
+                  transition-all duration-300
                   ${
                     isActive
-                      ? "bg-purple-500/20 border-purple-500/50 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)] scale-105"
-                      : "bg-[#1a1a1a] border-[#00ff4133] text-gray-200 hover:bg-[#242424] hover:border-purple-500/30 hover:scale-105"
+                      ? "scale-105 border-[#f40612]/60 bg-[#f40612]/15 text-[#f40612] shadow-[0_0_16px_rgba(229,9,20,0.32)]"
+                      : "border-white/15 bg-surface-1 text-white/70 hover:scale-105 hover:border-[#f40612]/45 hover:text-white"
                   }
                 `}
               >
@@ -202,11 +198,10 @@ export function FilterBar({
           })}
         </div>
 
-        {/* Right Scroll Button */}
         {showRightScroll && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-[#242424]/95 backdrop-blur-sm border border-[#00ff4133] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#2a2a2a] text-[#e50914]"
+            className="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#1c2534]/95 text-[#e50914] opacity-0 backdrop-blur-sm transition-opacity hover:border-[#e50914]/45 group-hover:opacity-100"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-4 w-4" />
@@ -214,7 +209,6 @@ export function FilterBar({
         )}
       </div>
 
-      {/* CSS to hide scrollbar */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getVoices } from "@/lib/api/elevenlabs";
 import { db } from "@/lib/db/client";
 import { voices } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -72,8 +72,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Voices error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch voices";
     return NextResponse.json(
-      { error: "Failed to fetch voices" },
+      { error: "Failed to fetch voices", details: message },
       { status: 500 }
     );
   }

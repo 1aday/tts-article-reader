@@ -25,6 +25,33 @@ export const VOICE_NAMES: Record<string, string> = {
   "d94gCIrx5MpdYKm9Naj3": "gc",
 };
 
+const VOICE_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
+const VOICE_NAMES_BY_LOWERCASE = new Map(
+  Object.entries(VOICE_NAMES).map(([id, name]) => [id.toLowerCase(), name])
+);
+
+export function isLikelyVoiceId(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return VOICE_ID_PATTERN.test(value.trim());
+}
+
+export function isDisplayVoiceName(
+  value: string | null | undefined,
+  voiceId?: string | null
+): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  if (voiceId && trimmed.toLowerCase() === voiceId.trim().toLowerCase()) {
+    return false;
+  }
+
+  return !isLikelyVoiceId(trimmed);
+}
+
 export function getVoiceName(voiceId: string): string {
-  return VOICE_NAMES[voiceId] || voiceId;
+  if (!voiceId) return "Voice narration";
+  const trimmedId = voiceId.trim();
+  return VOICE_NAMES[trimmedId] || VOICE_NAMES_BY_LOWERCASE.get(trimmedId.toLowerCase()) || "Custom Voice";
 }

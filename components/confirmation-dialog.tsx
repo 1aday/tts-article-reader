@@ -43,18 +43,15 @@ export function ConfirmationDialog({
 
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fadeIn"
+        className="fixed inset-0 z-50 bg-black/72 backdrop-blur-sm animate-fadeIn"
         onClick={handleBackdropClick}
       >
-        {/* Dialog */}
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 bg-[#1a1a1a] border border-[#00ff4133] rounded-lg shadow-2xl animate-scaleIn">
-          {/* Header */}
+        <div className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-surface-1 p-6 shadow-[0_30px_80px_rgba(2,5,12,0.8)] animate-scaleIn">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               {variant === "danger" && (
-                <div className="p-2 bg-red-500/10 rounded-full">
+                <div className="rounded-full bg-red-500/10 p-2">
                   <AlertTriangle className="h-6 w-6 text-red-500" />
                 </div>
               )}
@@ -72,18 +69,16 @@ export function ConfirmationDialog({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-gray-400 hover:text-[#e50914] transition-colors disabled:opacity-50"
+              className="text-white/40 transition-colors hover:text-[#e50914] disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Message */}
-          <p className="text-gray-300 mb-6 leading-relaxed">
+          <p className="mb-6 leading-relaxed text-white/75">
             {message}
           </p>
 
-          {/* Actions */}
           <div className="flex gap-3 justify-end">
             <Button
               variant="outline"

@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
 
 const ENHANCEMENT_PROMPT = `Transform article text for natural text-to-speech by:
 1. Adding [pause] tags after sentences (sparingly, only where natural pauses would occur)
@@ -18,7 +16,16 @@ Return ONLY the enhanced text without any explanations or metadata.`;
 export async function enhanceText(text: string): Promise<AsyncIterable<string>> {
   console.log(`[OpenAI] Starting text enhancement (${text.length} characters)`);
 
-  const stream = await openai.chat.completions.create({
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey?.trim()) {
+    throw new Error("OPENAI_API_KEY is required for AI text enhancement");
+  }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey });
+  }
+
+  const stream = await openaiClient.chat.completions.create({
     model: "gpt-5-nano",
     messages: [
       {

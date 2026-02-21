@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AudioSettingsPanel } from "@/components/audio-settings-panel";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -12,7 +13,6 @@ import {
   Search,
   Filter,
   X,
-  Settings as SettingsIcon,
   Sliders,
   Star,
   Sparkles,
@@ -22,6 +22,7 @@ import {
   User,
   Globe
 } from "lucide-react";
+import { DEFAULT_GENERATION_AUDIO_SETTINGS } from "@/lib/audio-settings";
 
 interface Voice {
   id: string;
@@ -37,6 +38,7 @@ interface AudioSettings {
   similarityBoost: number;
   style: number;
   useSpeakerBoost: boolean;
+  enableScriptEnhancement: boolean;
 }
 
 export default function VoiceSelectPage() {
@@ -63,10 +65,7 @@ export default function VoiceSelectPage() {
   // Audio generation settings
   const [showSettings, setShowSettings] = useState(false);
   const [audioSettings, setAudioSettings] = useState<AudioSettings>({
-    stability: 0.5,
-    similarityBoost: 0.75,
-    style: 0,
-    useSpeakerBoost: true,
+    ...DEFAULT_GENERATION_AUDIO_SETTINGS,
   });
 
   useEffect(() => {
@@ -216,6 +215,8 @@ export default function VoiceSelectPage() {
       return;
     }
 
+    const selectedVoiceData = voices.find((voice) => voice.id === selectedVoice);
+
     // Encode settings as URL params
     const params = new URLSearchParams({
       voiceId: selectedVoice,
@@ -223,7 +224,12 @@ export default function VoiceSelectPage() {
       similarityBoost: audioSettings.similarityBoost.toString(),
       style: audioSettings.style.toString(),
       useSpeakerBoost: audioSettings.useSpeakerBoost.toString(),
+      skipEnhancement: (!audioSettings.enableScriptEnhancement).toString(),
     });
+
+    if (selectedVoiceData?.name) {
+      params.set("voiceName", selectedVoiceData.name);
+    }
 
     router.push(`/generate/${articleId}?${params.toString()}`);
   };
@@ -251,7 +257,7 @@ export default function VoiceSelectPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight">
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
               Select Voice
             </h1>
             <p className="text-sm sm:text-base text-white/60">
@@ -282,7 +288,9 @@ export default function VoiceSelectPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() =>
+                    setActiveTab(tab.id as "all" | "premade" | "cloned" | "professional")
+                  }
                   className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-semibold text-sm sm:text-base transition-all whitespace-nowrap ${
                     isActive
                       ? "bg-[#e50914] text-white shadow-lg"
@@ -496,90 +504,18 @@ export default function VoiceSelectPage() {
           {/* Audio Settings Panel */}
           {showSettings && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6 space-y-6">
-              <div className="flex items-center gap-2 text-white">
-                <SettingsIcon className="w-5 h-5 text-[#e50914]" />
-                <span className="font-semibold">Audio Generation Settings</span>
-              </div>
-
-              {/* Stability */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm text-white/70">
-                    Stability
-                  </label>
-                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.stability.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={audioSettings.stability}
-                  onChange={(e) => setAudioSettings({...audioSettings, stability: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
-                />
-                <p className="text-xs text-white/50">Higher = more stable, lower = more variable</p>
-              </div>
-
-              {/* Similarity Boost */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm text-white/70">
-                    Similarity Boost
-                  </label>
-                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.similarityBoost.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={audioSettings.similarityBoost}
-                  onChange={(e) => setAudioSettings({...audioSettings, similarityBoost: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
-                />
-                <p className="text-xs text-white/50">Enhance similarity to original voice</p>
-              </div>
-
-              {/* Style */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm text-white/70">
-                    Style Exaggeration
-                  </label>
-                  <span className="text-sm font-mono text-[#e50914]">{audioSettings.style.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={audioSettings.style}
-                  onChange={(e) => setAudioSettings({...audioSettings, style: parseFloat(e.target.value)})}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#e50914] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
-                />
-                <p className="text-xs text-white/50">Higher = more expressive/exaggerated</p>
-              </div>
-
-              {/* Speaker Boost */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <label className="text-sm text-white/70">Speaker Boost</label>
-                  <p className="text-xs text-white/50">Enhance voice characteristics</p>
-                </div>
-                <button
-                  onClick={() => setAudioSettings({...audioSettings, useSpeakerBoost: !audioSettings.useSpeakerBoost})}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    audioSettings.useSpeakerBoost ? "bg-[#e50914]" : "bg-white/20"
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      audioSettings.useSpeakerBoost ? "translate-x-7" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
+              <AudioSettingsPanel
+                stability={audioSettings.stability}
+                onStabilityChange={(value) => setAudioSettings((prev) => ({ ...prev, stability: value }))}
+                similarityBoost={audioSettings.similarityBoost}
+                onSimilarityBoostChange={(value) => setAudioSettings((prev) => ({ ...prev, similarityBoost: value }))}
+                style={audioSettings.style}
+                onStyleChange={(value) => setAudioSettings((prev) => ({ ...prev, style: value }))}
+                useSpeakerBoost={audioSettings.useSpeakerBoost}
+                onUseSpeakerBoostChange={(value) => setAudioSettings((prev) => ({ ...prev, useSpeakerBoost: value }))}
+                enableScriptEnhancement={audioSettings.enableScriptEnhancement}
+                onEnableScriptEnhancementChange={(value) => setAudioSettings((prev) => ({ ...prev, enableScriptEnhancement: value }))}
+              />
             </div>
           )}
         </div>
@@ -660,7 +596,7 @@ export default function VoiceSelectPage() {
                       {(gender || accent || age) && (
                         <div className="flex flex-wrap gap-1.5 mb-4">
                           {gender && (
-                            <div className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-purple-300">
+                            <div className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#e50914]/15 to-[#f40612]/10 border border-[#e50914]/35 text-white/85">
                               <User className="w-3 h-3" />
                               {gender}
                             </div>

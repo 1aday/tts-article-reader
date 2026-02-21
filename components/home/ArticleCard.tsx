@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
-import { Play, Loader2, FileText } from "lucide-react";
+import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
+import { Clock3, Loader2, Play, Waves } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 
 interface ArticleCardProps {
@@ -11,83 +12,79 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article }: ArticleCardProps) {
   const { play } = usePlayer();
-  const displayImage = article.generatedImageUrl || article.imageUrl;
+  const displayImage = hasPersistentGeneratedImage(article.generatedImageUrl)
+    ? article.generatedImageUrl
+    : article.imageUrl;
   const hasAudio = article.audioFiles && article.audioFiles.length > 0;
+  const primaryAudioFile = hasAudio ? article.audioFiles![0] : null;
   const isGenerating = article.imageGenerationStatus === "generating";
+  const href = primaryAudioFile ? `/player/${primaryAudioFile.id}` : `/voice-select/${article.id}`;
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (hasAudio) {
-      e.preventDefault();
-      const audioFile = article.audioFiles![0];
-      if (!audioFile.blobUrl) return; // Skip if no URL
-      play({
-        id: audioFile.id,
-        articleId: article.id,
-        articleTitle: article.title,
-        articleImageUrl: displayImage,
-        voiceName: audioFile.voiceName,
-        blobUrl: audioFile.blobUrl,
-        duration: audioFile.duration || 0,
-      });
-    }
+  const handleClick = () => {
+    if (!hasAudio) return;
+    const audioFile = primaryAudioFile;
+    if (!audioFile) return;
+    if (!audioFile.blobUrl) return;
+
+    play({
+      id: audioFile.id,
+      articleId: article.id,
+      articleTitle: article.title,
+      articleImageUrl: displayImage,
+      voiceName: audioFile.voiceName,
+      blobUrl: audioFile.blobUrl,
+      duration: audioFile.duration || 0,
+    });
   };
-
-  // If no audio, link to voice selection
-  const href = hasAudio ? '#' : `/voice-select/${article.id}`;
 
   return (
     <Link href={href} onClick={handleClick} className="netflix-carousel-item">
-      <div className="group relative netflix-aspect-portrait">
-        {displayImage ? (
-          <>
-            {/* Generated/Featured Image */}
+      <article className="netflix-card group">
+        <div className="netflix-aspect-portrait overflow-hidden">
+          {displayImage ? (
             <img
               src={displayImage}
               alt={article.title}
-              className="image-cover"
+              className="relative z-0 image-cover transition-transform duration-500 group-hover:scale-110"
             />
-            {/* Netflix-style Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-          </>
-        ) : (
-          <>
-            {/* Placeholder Background */}
-            <div className="absolute inset-0 bg-card flex items-center justify-center">
-              <FileText className="w-16 h-16 text-tertiary" />
-            </div>
-            {/* Gradient Overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-          </>
-        )}
-
-        {/* Hover Play Button */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-          <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/50">
-            <Play className="w-7 h-7 text-white fill-white ml-1" />
-          </div>
-        </div>
-
-        {/* Title Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          <h3 className="text-sm font-semibold text-white line-clamp-2">
-            {article.title}
-          </h3>
-          {hasAudio && (
-            <div className="flex items-center gap-1 mt-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#46d369]" />
-              <span className="text-xs text-secondary">Ready to Listen</span>
-            </div>
+          ) : (
+            <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,121,88,0.4),transparent_45%),linear-gradient(170deg,#141a26,#212b3d)]" />
           )}
-        </div>
 
-        {/* Generation Status Badge */}
-        {isGenerating && (
-          <div className="absolute top-2 right-2 netflix-badge flex items-center gap-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            <span className="text-[10px]">AI</span>
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#05070b] via-[#05070b]/15 to-transparent" />
+
+          <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+            {isGenerating && (
+              <span className="netflix-badge">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                AI
+              </span>
+            )}
           </div>
-        )}
-      </div>
+
+          <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-black/45 backdrop-blur-md">
+              <Play className="h-5 w-5 text-white" fill="white" />
+            </div>
+          </div>
+
+          <div className="netflix-info-overlay space-y-2">
+            <h3 className="line-clamp-2 text-sm font-bold text-white">{article.title}</h3>
+            <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60">
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3 w-3" />
+                {Math.max(1, Math.round(article.wordCount / 200))} min
+              </span>
+              {hasAudio && (
+                <span className="inline-flex items-center gap-1 text-white/85">
+                  <Waves className="h-3 w-3" />
+                  Ready
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </article>
     </Link>
   );
 }

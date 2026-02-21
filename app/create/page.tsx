@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Link2, Sparkles, Type } from "lucide-react";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -73,7 +73,6 @@ export default function CreatePage() {
 
   return (
     <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
-      {/* Netflix Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
@@ -81,11 +80,11 @@ export default function CreatePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-12 sm:mb-16 md:mb-20 animate-fadeInDown">
           <div className="space-y-2 sm:space-y-3">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight">
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
               New Article
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#d2d2d2] leading-relaxed">
-              Add content from URL or paste text directly
+              Add a source and produce a premium voice-ready script.
             </p>
           </div>
           <Link href="/">
@@ -101,22 +100,22 @@ export default function CreatePage() {
         </div>
 
         {/* Main Content */}
-        <div className="bg-[#2f2f2f] backdrop-blur-md border border-[#404040] rounded-3xl p-8 sm:p-10 md:p-14 shadow-2xl animate-fadeInUp">
+        <div className="bg-[#111723]/95 backdrop-blur-md border border-white/10 rounded-3xl p-8 sm:p-10 md:p-14 shadow-2xl animate-fadeInUp">
           <Tabs defaultValue="url" className="space-y-8 sm:space-y-10 md:space-y-12">
-            <TabsList className="grid w-full grid-cols-2 bg-[#181818] p-2 rounded-2xl border border-[#404040] h-auto shadow-lg">
+            <TabsList className="grid w-full grid-cols-2 bg-[#0f141d] p-2 rounded-2xl border border-white/10 h-auto shadow-lg">
               <TabsTrigger
                 value="url"
-                className="h-14 sm:h-16 data-[state=active]:bg-[#e50914] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-[#808080] data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/10 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2"
+                className="h-14 sm:h-16 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2"
               >
-                <span className="text-2xl">📰</span>
+                <Link2 className="h-5 w-5" />
                 <span className="hidden sm:inline">From URL</span>
                 <span className="sm:hidden">URL</span>
               </TabsTrigger>
               <TabsTrigger
                 value="paste"
-                className="h-14 sm:h-16 data-[state=active]:bg-[#e50914] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-[#808080] data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/10 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2"
+                className="h-14 sm:h-16 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2"
               >
-                <span className="text-2xl">📝</span>
+                <Type className="h-5 w-5" />
                 <span className="hidden sm:inline">Paste Text</span>
                 <span className="sm:hidden">Text</span>
               </TabsTrigger>
@@ -137,7 +136,7 @@ export default function CreatePage() {
                     required
                   />
                   <p className="text-sm sm:text-base text-[#d2d2d2] pl-2 leading-relaxed">
-                    Paste any article URL - we'll extract the content automatically
+                    Paste any article URL - we will extract the content automatically
                   </p>
                 </div>
 
@@ -152,7 +151,7 @@ export default function CreatePage() {
                 </Button>
               </form>
 
-              <div className="bg-[#181818] border border-[#404040] rounded-2xl p-6 sm:p-8 animate-fadeInUp stagger-1">
+              <div className="bg-[#0f141d] border border-white/10 rounded-2xl p-6 sm:p-8 animate-fadeInUp stagger-1">
                 <p className="text-sm sm:text-base font-semibold text-white mb-4 sm:mb-5 flex items-center gap-2">
                   <span className="text-lg">✓</span>
                   Supported Sites

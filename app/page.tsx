@@ -4,13 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FeaturedArticleHero } from '@/components/home/FeaturedArticleHero';
 import { ArticleCarousel } from '@/components/home/ArticleCarousel';
-import { Button } from '@/components/ui/button';
 import { Article, AudioFile } from '@/lib/db/schema';
-import { Plus, Sparkles } from 'lucide-react';
+import { hasPersistentGeneratedImage } from '@/lib/utils/image-url';
+import { Plus, Sparkles, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ArticleWithAudio = Article & {
   audioFiles?: AudioFile[];
+};
+
+type FilterCategory = {
+  name: string;
 };
 
 export default function Home() {
@@ -55,12 +59,15 @@ export default function Home() {
         });
 
         if (articlesData.success) {
-          setArticles(articlesData.articles);
+          const fetchedArticles = (articlesData.articles ?? []) as ArticleWithAudio[];
+          setArticles(fetchedArticles);
 
           // Auto-categorize articles without categories
-          const needsCategorization = articlesData.articles.filter((a: any) =>
-            !a.categoriesJson &&
-            (!a.categorizationStatus || a.categorizationStatus === 'pending' || a.categorizationStatus === 'failed')
+          const needsCategorization = fetchedArticles.filter((article) =>
+            !article.categoriesJson &&
+            (!article.categorizationStatus ||
+              article.categorizationStatus === 'pending' ||
+              article.categorizationStatus === 'failed')
           );
 
           console.log('[Home] Articles needing categorization:', needsCategorization.length);
@@ -70,9 +77,11 @@ export default function Home() {
           }
 
           // Auto-generate images for articles without them
-          const needsImages = articlesData.articles.filter((a: any) =>
-            !a.generatedImageUrl &&
-            (!a.imageGenerationStatus || a.imageGenerationStatus === 'pending' || a.imageGenerationStatus === 'failed')
+          const needsImages = fetchedArticles.filter((article) =>
+            !hasPersistentGeneratedImage(article.generatedImageUrl) &&
+            (!article.imageGenerationStatus ||
+              article.imageGenerationStatus === 'pending' ||
+              article.imageGenerationStatus === 'failed')
           );
 
           console.log('[Home] Articles needing images:', needsImages.length);
@@ -83,7 +92,8 @@ export default function Home() {
         }
 
         if (filtersData.success) {
-          setCategories(filtersData.categories.map((c: any) => c.name));
+          const filterCategories = (filtersData.categories ?? []) as FilterCategory[];
+          setCategories(filterCategories.map((category) => category.name));
         }
       } catch (error) {
         console.error('[Home] Failed to fetch data:', error);
@@ -100,7 +110,7 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const categorizeMissingArticles = async (articlesToCategorize: any[]) => {
+  const categorizeMissingArticles = async (articlesToCategorize: Array<{ id: number }>) => {
     console.log('[Home] Auto-categorizing articles:', articlesToCategorize.length);
 
     // Categorize in background (don't block UI)
@@ -128,7 +138,8 @@ export default function Home() {
         setArticles(articlesData.articles);
       }
       if (filtersData.success) {
-        setCategories(filtersData.categories.map((c: any) => c.name));
+        const filterCategories = (filtersData.categories ?? []) as FilterCategory[];
+        setCategories(filterCategories.map((category) => category.name));
       }
       console.log('[Home] Refreshed after categorization');
     }, 3000); // Wait 3 seconds for categorization to complete
@@ -193,8 +204,13 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading your library...</div>
+      <div className="min-h-screen bg-primary flex items-center justify-center px-6">
+        <div className="rounded-2xl border border-white/10 bg-surface-1/80 px-8 py-6 text-center shadow-2xl">
+          <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#e50914]/40 bg-[#e50914]/15">
+            <Wand2 className="h-5 w-5 animate-pulse text-[#e50914]" />
+          </div>
+          <div className="text-lg font-semibold text-white">Loading your library...</div>
+        </div>
       </div>
     );
   }
@@ -202,23 +218,22 @@ export default function Home() {
   // Empty state: Show welcome screen
   if (articles.length === 0) {
     return (
-      <div className="min-h-screen bg-secondary relative overflow-hidden">
-        <div className="relative flex flex-col items-center justify-center min-h-screen p-8">
-          <div className="max-w-2xl text-center space-y-6">
+      <div className="relative min-h-screen overflow-hidden bg-secondary pt-16">
+        <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-6 py-16">
+          <div className="w-full rounded-[2rem] border border-white/10 bg-gradient-to-br from-surface-1/95 via-surface-2/90 to-surface-1/95 p-10 text-center shadow-[0_40px_90px_rgba(3,6,14,0.65)] sm:p-16">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/70">
+              New Workspace
+            </div>
             <h1 className="netflix-h1 mb-4">
-              Welcome to{' '}
-              <span className="text-netflix-red">
-                TTS Article Reader
-              </span>
+              Build Your
+              <span className="block text-netflix-red"> Listening Catalog</span>
             </h1>
-            <p className="netflix-body text-xl mb-8">
-              Transform web articles into natural-sounding audio with AI voices.
-              Start by adding your first article.
+            <p className="mx-auto mb-8 max-w-2xl netflix-body text-lg sm:text-xl">
+              Drop an article URL or paste text, pick a voice, and create premium audio in minutes.
             </p>
-            <Link href="/create">
-              <button className="netflix-button netflix-button-primary text-lg px-8 py-4">
-                Add Your First Article
-              </button>
+            <Link href="/create" className="netflix-button netflix-button-primary px-8 py-4 text-base sm:text-lg">
+              <Plus className="h-5 w-5" />
+              Add your first article
             </Link>
           </div>
         </div>
@@ -238,24 +253,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-primary pb-12">
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
-        {/* Add Article Button */}
+      <div className="fixed bottom-6 right-4 z-50 flex flex-col gap-3 sm:bottom-8 sm:right-8">
         <Link href="/create">
           <button
-            className="bg-[#e50914] hover:bg-[#ff1e25] text-white font-semibold shadow-2xl transition-all rounded-full w-14 h-14 flex items-center justify-center"
+            className="group inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#e50914]/40 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white shadow-[0_18px_32px_rgba(229,9,20,0.4)] transition hover:-translate-y-0.5"
             title="Add new article"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="h-6 w-6 transition group-hover:rotate-90" />
           </button>
         </Link>
 
-        {/* Generate Images Button */}
         {articles.length > 0 && (
           <button
-            onClick={() => generateMissingImages(true)} // Regenerate ALL when clicked manually
+            onClick={() => generateMissingImages(true)}
             disabled={generatingImages}
-            className="bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white font-semibold shadow-2xl transition-all rounded-full w-14 h-14 flex items-center justify-center disabled:opacity-50"
+            className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-surface-2/90 text-white shadow-[0_14px_28px_rgba(5,8,15,0.5)] transition hover:-translate-y-0.5 hover:border-[#e50914]/45 disabled:opacity-50"
             title="Regenerate all AI images"
           >
             <Sparkles className={`w-6 h-6 ${generatingImages ? 'animate-spin' : ''}`} />
@@ -263,18 +275,26 @@ export default function Home() {
         )}
       </div>
 
-      {/* Featured Hero */}
       <FeaturedArticleHero article={featuredArticle} />
 
-      {/* Content Sections */}
-      <div className="space-y-8 md:space-y-12 pt-8 md:pt-12">
-        {/* Recently Added */}
+      <div className="space-y-8 pt-8 md:space-y-12 md:pt-12">
+        <section className="netflix-row">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-surface-1/85 via-surface-2/75 to-surface-1/85 px-5 py-4 shadow-lg sm:px-6">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.1em] text-white/65 sm:text-sm">
+              <span>{articles.length} saved articles</span>
+              <span className="h-1 w-1 rounded-full bg-white/30" />
+              <span>{categories.length} active categories</span>
+              <span className="h-1 w-1 rounded-full bg-white/30" />
+              <span>{articlesWithAudio.length} ready to listen</span>
+            </div>
+          </div>
+        </section>
+
         <ArticleCarousel
           title="Recently Added"
           articles={recentArticles.slice(0, 12)}
         />
 
-        {/* By Category */}
         {categories.map(category => {
           const categoryArticles = articles.filter(article => {
             try {
@@ -296,7 +316,6 @@ export default function Home() {
           );
         })}
 
-        {/* Articles with Audio */}
         {articlesWithAudio.length > 0 && (
           <ArticleCarousel
             title="Ready to Listen"

@@ -42,22 +42,51 @@ export async function POST(request: NextRequest) {
     // Create SSE stream
     const stream = new ReadableStream({
       async start(controller) {
+        let streamClosed = false;
+        const emitEvent = (payload: Record<string, unknown>) => {
+          if (streamClosed) {
+            return;
+          }
+
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
+            );
+          } catch (streamError) {
+            streamClosed = true;
+            console.warn(
+              "[Enhance] SSE stream closed; continuing without live updates.",
+              streamError
+            );
+          }
+        };
+
+        const closeStream = () => {
+          if (streamClosed) {
+            return;
+          }
+
+          try {
+            controller.close();
+          } catch (streamError) {
+            console.warn("[Enhance] SSE stream already closed.", streamError);
+          } finally {
+            streamClosed = true;
+          }
+        };
+
         try {
           let enhancedText = "";
 
           // Send initial progress
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "progress", progress: 0, step: "Enhancing text..." })}\n\n`)
-          );
+          emitEvent({ type: "progress", progress: 0, step: "Enhancing text..." });
 
           // Stream enhanced text
           const textStream = await enhanceText(article.originalText);
 
           for await (const chunk of textStream) {
             enhancedText += chunk;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`)
-            );
+            emitEvent({ type: "chunk", content: chunk });
           }
 
           // Save enhanced text to database
@@ -67,16 +96,13 @@ export async function POST(request: NextRequest) {
             .where(eq(articles.id, articleId));
 
           // Send completion
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "complete", enhancedText })}\n\n`)
-          );
+          emitEvent({ type: "complete", enhancedText });
 
-          controller.close();
+          closeStream();
         } catch (error) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", error: "Enhancement failed" })}\n\n`)
-          );
-          controller.close();
+          console.error("[Enhance] Enhancement error:", error);
+          emitEvent({ type: "error", error: "Enhancement failed" });
+          closeStream();
         }
       },
     });

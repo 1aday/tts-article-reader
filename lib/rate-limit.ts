@@ -11,11 +11,13 @@ class InMemoryRateLimit {
   private maxRequests: number;
   private windowMs: number;
   private prefix: string;
+  private disabled: boolean;
 
-  constructor(maxRequests: number, windowMs: number, prefix: string) {
+  constructor(maxRequests: number, windowMs: number, prefix: string, disabled = false) {
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
     this.prefix = prefix;
+    this.disabled = disabled;
 
     // Clean up old entries every minute
     setInterval(() => this.cleanup(), 60000);
@@ -27,6 +29,15 @@ class InMemoryRateLimit {
     remaining: number;
     reset: number;
   }> {
+    if (this.disabled) {
+      return {
+        success: true,
+        limit: 1000000,
+        remaining: 999999,
+        reset: Date.now() + this.windowMs,
+      };
+    }
+
     const key = `${this.prefix}:${identifier}`;
     const now = Date.now();
     const entry = this.cache.get(key);
@@ -74,11 +85,13 @@ class InMemoryRateLimit {
   }
 }
 
+const isDevelopment = process.env.NODE_ENV !== "production";
+
 // Rate limit instances
 export const rateLimits = {
-  scrape: new InMemoryRateLimit(10, 60 * 60 * 1000, "ratelimit:scrape"), // 10 per hour
-  generate: new InMemoryRateLimit(5, 60 * 60 * 1000, "ratelimit:generate"), // 5 per hour
-  preview: new InMemoryRateLimit(20, 60 * 60 * 1000, "ratelimit:preview"), // 20 per hour
+  scrape: new InMemoryRateLimit(10, 60 * 60 * 1000, "ratelimit:scrape", isDevelopment), // 10 per hour in production
+  generate: new InMemoryRateLimit(5, 60 * 60 * 1000, "ratelimit:generate", isDevelopment), // 5 per hour in production
+  preview: new InMemoryRateLimit(20, 60 * 60 * 1000, "ratelimit:preview", isDevelopment), // 20 per hour in production
 };
 
 // Helper to get client IP

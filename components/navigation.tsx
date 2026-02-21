@@ -1,71 +1,66 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Home, Library, Plus, Music } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/library", label: "Library" },
+  { href: "/create", label: "Create" },
+];
 
 export function Navigation() {
-  const router = useRouter();
   const pathname = usePathname();
-
-  // Don't show nav on home page
-  if (pathname === "/") {
-    return null;
-  }
+  const isHome = pathname === "/";
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#141414]/95 backdrop-blur-xl border-b border-[#404040]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo/Brand */}
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 text-xl font-bold text-white hover:text-[#e50914] transition-colors"
-          >
-            <Music className="w-6 h-6 text-[#e50914]" />
-            <span className="hidden sm:inline">TTS Reader</span>
-          </button>
+    <nav
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all",
+        isHome
+          ? "bg-gradient-to-b from-black/85 to-black/10 border-b border-transparent"
+          : "border-b border-white/10 bg-[#07090d]/92 backdrop-blur-2xl"
+      )}
+    >
+      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-10">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 rounded-lg px-1 py-1 text-white transition"
+        >
+          <span className="font-display text-3xl leading-none tracking-[0.06em] text-[#e50914]">
+            TTS
+          </span>
+          <span className="hidden text-sm font-semibold uppercase tracking-[0.16em] text-white/65 sm:inline">
+            Reader
+          </span>
+        </Link>
 
-          {/* Nav Links */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => router.push("/")}
-              variant="ghost"
-              size="sm"
-              className={`${
-                pathname === "/"
-                  ? "bg-[#e50914]/20 text-[#e50914]"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Home
-            </Button>
+        <div className="flex items-center gap-5">
+          {navItems.map(({ href, label }) => {
+            const active = pathname === href;
 
-            <Button
-              onClick={() => router.push("/library")}
-              variant="ghost"
-              size="sm"
-              className={`${
-                pathname === "/library"
-                  ? "bg-[#e50914]/20 text-[#e50914]"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Library className="w-4 h-4 mr-2" />
-              Library
-            </Button>
-
-            <Button
-              onClick={() => router.push("/create")}
-              size="sm"
-              className="netflix-button netflix-button-primary font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">New Article</span>
-              <span className="sm:hidden">New</span>
-            </Button>
-          </div>
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "relative text-sm font-semibold uppercase tracking-[0.11em] transition-colors",
+                  active
+                    ? "text-white"
+                    : "text-white/65 hover:text-white"
+                )}
+              >
+                {label}
+                <span
+                  className={cn(
+                    "absolute -bottom-2 left-0 h-0.5 w-full origin-left bg-[#e50914] transition-transform",
+                    active ? "scale-x-100" : "scale-x-0"
+                  )}
+                />
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>

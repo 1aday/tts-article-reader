@@ -2,33 +2,69 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const url = searchParams.get('url');
+  const rawUrl = searchParams.get('url');
 
-  if (!url) {
+  if (!rawUrl) {
     return NextResponse.json({ error: 'URL parameter is required' }, { status: 400 });
   }
 
   try {
-    // Fetch the audio file from Vercel Blob
-    const response = await fetch(url);
+    const upstreamUrl = rawUrl.startsWith("/")
+      ? `${request.nextUrl.origin}${rawUrl}`
+      : rawUrl;
+
+    const range = request.headers.get("range");
+    const upstreamHeaders = new Headers();
+    if (range) {
+      upstreamHeaders.set("range", range);
+    }
+
+    const response = await fetch(upstreamUrl, {
+      method: "GET",
+      headers: upstreamHeaders,
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch audio: ${response.statusText}`);
     }
 
-    const audioBuffer = await response.arrayBuffer();
+    const responseHeaders = new Headers();
+    const passthroughHeaderNames = [
+      "content-type",
+      "content-length",
+      "content-range",
+      "accept-ranges",
+      "cache-control",
+      "etag",
+      "last-modified",
+    ];
 
-    // Return with proper CORS headers
-    return new NextResponse(audioBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Cross-Origin-Resource-Policy': 'cross-origin',
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
+    for (const headerName of passthroughHeaderNames) {
+      const headerValue = response.headers.get(headerName);
+      if (headerValue) {
+        responseHeaders.set(headerName, headerValue);
+      }
+    }
+
+    if (!responseHeaders.has("content-type")) {
+      responseHeaders.set("content-type", "audio/mpeg");
+    }
+    if (!responseHeaders.has("accept-ranges")) {
+      responseHeaders.set("accept-ranges", "bytes");
+    }
+    if (!responseHeaders.has("cache-control")) {
+      responseHeaders.set("cache-control", "public, max-age=3600");
+    }
+
+    responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Range');
+    responseHeaders.set('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: responseHeaders,
     });
   } catch (error) {
     console.error('Audio proxy error:', error);

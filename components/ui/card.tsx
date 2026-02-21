@@ -13,15 +13,15 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const elevationClasses = {
       0: "bg-card border-[--border-color]",
       1: "bg-surface-1 border-[--border-color] shadow-md",
-      2: "bg-surface-2 border-[rgba(0,255,136,0.15)] shadow-lg",
-      3: "bg-surface-3 border-[rgba(0,255,136,0.2)] shadow-xl",
+      2: "bg-surface-2 border-white/15 shadow-lg",
+      3: "bg-surface-3 border-white/20 shadow-xl",
     }
 
     const hoverClasses = hover
-      ? "transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl cursor-pointer"
+      ? "transition-all duration-300 hover:transform hover:-translate-y-1.5 hover:shadow-2xl cursor-pointer"
       : ""
 
-    const glowClasses = glow ? "hover:shadow-[0_0_30px_rgba(0,255,136,0.2)]" : ""
+    const glowClasses = glow ? "hover:shadow-[0_0_30px_rgba(229,9,20,0.28)]" : ""
 
     return (
       <div
@@ -59,7 +59,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-xl font-bold leading-tight tracking-tight text-[--terminal-green]",
+      "text-xl font-bold leading-tight tracking-tight text-white",
       className
     )}
     {...props}

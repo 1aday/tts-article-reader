@@ -1,9 +1,7 @@
-import { put } from "@vercel/blob";
+import { uploadGeneratedImage } from "@/lib/storage/image-storage";
 
 const REPLICATE_API_URL = "https://api.replicate.com/v1/predictions";
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-
-const isProduction = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
 interface ImageGenerationOptions {
   prompt: string;
@@ -27,8 +25,9 @@ interface ReplicatePrediction {
 /**
  * Generate an image using Google's Nano Banana Pro (Gemini 3 Pro Image) on Replicate
  * Leverages reasoning-based generation for content-expressive, magazine-quality article covers
- * Downloads the generated image and uploads to Vercel Blob for persistence
- * Returns the Vercel Blob URL
+ * Downloads the generated image and uploads it to persistent storage.
+ * Prefers Supabase Storage when configured, otherwise falls back to Vercel Blob.
+ * Returns a persistent image URL.
  */
 export async function generateImage(options: ImageGenerationOptions): Promise<string> {
   if (!REPLICATE_API_TOKEN) {
@@ -124,34 +123,35 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
     contentType: imageResponse.headers.get("content-type")
   });
 
-  // Step 5: Upload to Vercel Blob for persistence
+  // Step 5: Upload to persistent storage
   try {
-    const filename = `generated-${Date.now()}.${outputFormat}`;
+    const filename = `generated-${prediction.id}-${Date.now()}.${outputFormat}`;
+    const contentType = outputFormat === "png" ? "image/png" : "image/jpeg";
 
-    console.log("[Replicate] Attempting Vercel Blob upload:", {
+    console.log("[Replicate] Uploading generated image:", {
       filename,
       size: imageBuffer.length,
-      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
-      isProduction
+      contentType
     });
 
-    const blob = await put(filename, imageBuffer, {
-      access: "public",
-      addRandomSuffix: false,
-      contentType: `image/${outputFormat}`
+    const uploaded = await uploadGeneratedImage({
+      buffer: imageBuffer,
+      filename,
+      contentType,
     });
 
-    console.log("[Replicate] Successfully uploaded to Vercel Blob:", blob.url);
-    return blob.url;
-  } catch (blobError) {
-    console.error("[Replicate] Vercel Blob upload failed:", {
-      error: blobError instanceof Error ? blobError.message : String(blobError),
-      isProduction,
-      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+    console.log("[Replicate] Successfully uploaded generated image:", {
+      provider: uploaded.provider,
+      url: uploaded.url
+    });
+    return uploaded.url;
+  } catch (uploadError) {
+    const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
+
+    console.error("[Replicate] Persistent upload failed:", {
+      error: errorMessage,
     });
 
-    // Fallback to Replicate URL (temporary, will expire)
-    console.log("[Replicate] Falling back to temporary Replicate URL");
-    return imageUrl;
+    throw new Error(`Failed to persist generated image: ${errorMessage}`);
   }
 }
