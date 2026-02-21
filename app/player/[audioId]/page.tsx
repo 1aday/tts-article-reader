@@ -45,6 +45,8 @@ const VOLUME_STORAGE_KEY = "tts-full-player-volume";
 const PLAYBACK_RATE_STORAGE_KEY = "tts-full-player-playback-rate";
 const LISTENING_PROGRESS_PREFIX = "tts-full-player-progress-";
 const GENERATED_COVER_MEDIA_SESSION_SIZE = "768x1024";
+const MOBILE_VISUALIZER_MEDIA_QUERY = "(max-width: 640px), (pointer: coarse)";
+const MOBILE_VISUALIZER_BAR_HEIGHTS = [30, 45, 62, 38, 72, 50, 66, 44, 74, 48, 60, 36];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const getPlaybackUrl = (blobUrl?: string | null) => {
   if (!blobUrl) return null;
@@ -142,6 +144,7 @@ export default function PlayerPage() {
   const [showDeleteArticleDialog, setShowDeleteArticleDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [regeneratingImage, setRegeneratingImage] = useState(false);
+  const [useMobileVisualizerFallback, setUseMobileVisualizerFallback] = useState(false);
 
   const handleActionsCardToggle = () => {
     setShowActionsCard((prev) => {
@@ -245,6 +248,26 @@ export default function PlayerPage() {
       audioRef.current.playbackRate = clamp(playbackRate, 0.5, 2);
     }
   }, [playbackRate]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_VISUALIZER_MEDIA_QUERY);
+    const updateFallback = () => setUseMobileVisualizerFallback(mediaQuery.matches);
+    updateFallback();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateFallback);
+      return () => mediaQuery.removeEventListener("change", updateFallback);
+    }
+
+    mediaQuery.addListener(updateFallback);
+    return () => mediaQuery.removeListener(updateFallback);
+  }, []);
+
+  useEffect(() => {
+    if (!useMobileVisualizerFallback || animationFrameRef.current === null) return;
+    cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = null;
+  }, [useMobileVisualizerFallback]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -425,8 +448,9 @@ export default function PlayerPage() {
       }
       return;
     }
+    if (useMobileVisualizerFallback) return;
     void setupVisualizer();
-  }, [playing]);
+  }, [playing, useMobileVisualizerFallback]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
@@ -520,7 +544,7 @@ export default function PlayerPage() {
   }, [audioData?.duration, duration, muted, playbackRate, volume]);
 
   const setupVisualizer = async () => {
-    if (!audioRef.current || !canvasRef.current) return;
+    if (useMobileVisualizerFallback || !audioRef.current || !canvasRef.current) return;
 
     const AudioContextConstructor =
       window.AudioContext ||
@@ -719,7 +743,9 @@ export default function PlayerPage() {
     if (audioRef.current.paused) {
       setIsBuffering(true);
       try {
-        await setupVisualizer();
+        if (!useMobileVisualizerFallback) {
+          await setupVisualizer();
+        }
         await audioRef.current.play();
       } catch (error) {
         console.error("Play error:", error);
@@ -1182,16 +1208,35 @@ export default function PlayerPage() {
                           playing ? "opacity-100" : "opacity-65"
                         }`}
                       />
-                      <canvas
-                        ref={canvasRef}
-                        width={800}
-                        height={200}
-                        className="absolute inset-0 h-full w-full"
-                      />
+                      {useMobileVisualizerFallback ? (
+                        <div className="mobile-visualizer-fallback absolute inset-0" aria-hidden="true">
+                          {MOBILE_VISUALIZER_BAR_HEIGHTS.map((height, index) => (
+                            <span
+                              key={`${height}-${index}`}
+                              className={`mobile-visualizer-bar ${playing ? "is-active" : ""}`}
+                              style={{
+                                height: `${height}%`,
+                                animationDelay: `${index * 70}ms`,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <canvas
+                          ref={canvasRef}
+                          width={800}
+                          height={200}
+                          className="absolute inset-0 h-full w-full"
+                        />
+                      )}
                       {!playing && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/45">
-                            {isBuffering ? "Buffering audio..." : "Visualizer appears while playing"}
+                            {isBuffering
+                              ? "Buffering audio..."
+                              : useMobileVisualizerFallback
+                                ? "Mobile visualizer simplified for smooth playback"
+                                : "Visualizer appears while playing"}
                           </div>
                         </div>
                       )}
@@ -1386,7 +1431,9 @@ export default function PlayerPage() {
             onEnded={handleEnded}
             onPlay={() => {
               setPlaying(true);
-              void setupVisualizer();
+              if (!useMobileVisualizerFallback) {
+                void setupVisualizer();
+              }
             }}
             onPause={() => {
               setPlaying(false);
@@ -1789,6 +1836,36 @@ export default function PlayerPage() {
         }
         .animate-orbit-reverse {
           animation: orbitReverse 13s linear infinite;
+        }
+        @keyframes mobileVisualizerBarPulse {
+          0%, 100% {
+            transform: scaleY(0.45);
+            opacity: 0.4;
+          }
+          50% {
+            transform: scaleY(1);
+            opacity: 0.95;
+          }
+        }
+        .mobile-visualizer-fallback {
+          display: flex;
+          align-items: flex-end;
+          gap: 4px;
+          padding: 14px 12px;
+        }
+        .mobile-visualizer-bar {
+          flex: 1 1 0;
+          border-radius: 999px;
+          min-height: 20%;
+          background: linear-gradient(180deg, rgba(255, 126, 143, 0.95), rgba(229, 9, 20, 0.25));
+          box-shadow: 0 0 12px rgba(229, 9, 20, 0.3);
+          transform-origin: center bottom;
+          animation: mobileVisualizerBarPulse 1.2s ease-in-out infinite;
+          animation-play-state: paused;
+          opacity: 0.55;
+        }
+        .mobile-visualizer-bar.is-active {
+          animation-play-state: running;
         }
       `}</style>
     </div>
