@@ -8,12 +8,9 @@ interface ParsedRange {
 }
 
 function parseRange(rangeHeader: string, fileSize: number): ParsedRange | null {
-  if (rangeHeader.includes(",")) {
-    // Multipart ranges are not needed for audio scrubbing.
-    return null;
-  }
-
-  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  const [firstRangePart] = rangeHeader.split(",");
+  const normalizedRange = firstRangePart.trim();
+  const match = /^bytes=(\d*)-(\d*)$/.exec(normalizedRange);
   if (!match) return null;
 
   const [, startText, endText] = match;
