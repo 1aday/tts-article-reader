@@ -1183,6 +1183,17 @@ export default function PlayerPage() {
                         </button>
                       </div>
 
+                      <div className="flex justify-center">
+                        <button
+                          onClick={handleDownload}
+                          className="inline-flex items-center gap-2 rounded-full border border-[#e50914]/35 bg-[#e50914]/12 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-[#e50914]/22 hover:text-white sm:text-sm"
+                          aria-label="Download full audio file"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Full Audio
+                        </button>
+                      </div>
+
                       <div className="space-y-3">
                         <div className={`seek-lab relative sm:hidden ${playing ? "is-playing" : ""} ${isMobileTimelineScrubbing ? "is-scrubbing" : ""}`}>
                           <div

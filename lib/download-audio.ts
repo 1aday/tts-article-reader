@@ -28,12 +28,34 @@ function getFilenameFromContentDisposition(
   return fallback;
 }
 
+function buildDownloadUrl(audioId: number): string {
+  return `/api/audio/${audioId}/download`;
+}
+
+function isMobileBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isTouchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+
+  return /iphone|ipad|ipod|android|mobile/.test(userAgent) || isTouchMac;
+}
+
 export async function downloadAudioFile(audioId: number): Promise<void> {
   if (!Number.isFinite(audioId) || audioId <= 0) {
     throw new Error("Invalid audio id");
   }
 
-  const response = await fetch(`/api/audio/${audioId}/download`, {
+  const downloadUrl = buildDownloadUrl(audioId);
+
+  // Mobile browsers can fail or OOM when buffering large blobs in JS.
+  // Let the browser handle the file stream directly from our download endpoint.
+  if (isMobileBrowser()) {
+    window.location.assign(downloadUrl);
+    return;
+  }
+
+  const response = await fetch(downloadUrl, {
     method: "GET",
     cache: "no-store",
   });
