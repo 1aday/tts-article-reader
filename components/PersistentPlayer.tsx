@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Loader2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, Waves, X, Music2 } from "lucide-react";
 import { formatDuration } from "@/lib/audio-duration";
 
 export function PersistentPlayer() {
+  const pathname = usePathname();
   const {
     currentTrack,
     isStickyPlayerVisible,
@@ -26,6 +28,9 @@ export function PersistentPlayer() {
     showStickyPlayer,
   } = usePlayer();
 
+  const isPlayerPage = pathname?.startsWith("/player/") ?? false;
+
+  if (isPlayerPage) return null;
   if (!currentTrack) return null;
 
   if (!isStickyPlayerVisible) {
