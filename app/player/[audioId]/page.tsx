@@ -139,7 +139,8 @@ export default function PlayerPage() {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const activeMobileTimelinePointerIdRef = useRef<number | null>(null);
-  const volumeControlRef = useRef<HTMLDivElement | null>(null);
+  const mobileVolumeControlRef = useRef<HTMLDivElement | null>(null);
+  const desktopVolumeControlRef = useRef<HTMLDivElement | null>(null);
   const lastVolumeBeforeMuteRef = useRef(1);
   const lastSavedSecondRef = useRef(-1);
   const handoffTimeRef = useRef<number | null>(null);
@@ -224,7 +225,8 @@ export default function PlayerPage() {
     const handlePointerDownOutside = (event: PointerEvent) => {
       const targetNode = event.target as Node | null;
       if (!targetNode) return;
-      if (volumeControlRef.current?.contains(targetNode)) return;
+      if (mobileVolumeControlRef.current?.contains(targetNode)) return;
+      if (desktopVolumeControlRef.current?.contains(targetNode)) return;
       setShowVolumeControl(false);
     };
 
@@ -1154,19 +1156,6 @@ export default function PlayerPage() {
                   </div>
 
                   <div className="space-y-4 rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_75%_35%,rgba(229,9,20,0.14),transparent_52%),linear-gradient(160deg,rgba(10,12,18,0.68),rgba(8,10,16,0.44))] px-4 py-4 shadow-[0_24px_56px_rgba(0,0,0,0.34)] sm:px-5 sm:py-5">
-                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(130deg,rgba(15,18,26,0.94),rgba(25,11,17,0.76))] px-4 py-3">
-                      <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,72,92,0.24),transparent_60%),radial-gradient(circle_at_80%_15%,rgba(80,132,255,0.2),transparent_48%)] transition-opacity duration-500 ${playing ? "opacity-100" : "opacity-65"}`} />
-                      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#e50914]/70 to-transparent" />
-                      <div className="relative flex items-center justify-between gap-3 text-[11px] sm:text-xs">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 font-medium text-white/75">
-                          <span className={`h-1.5 w-1.5 rounded-full ${isBuffering ? "bg-amber-400 animate-pulse" : playing ? "bg-[#ff4c54] animate-pulse" : "bg-white/60"}`} />
-                          {isBuffering ? "Syncing stream" : playing ? "Live playback" : "Ready to scrub"}
-                        </span>
-                        <span className="font-mono text-white/65">{formatTime(effectiveDuration)} total</span>
-                      </div>
-                    </div>
-
                     <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-center gap-4 sm:gap-6">
                         <button
@@ -1262,9 +1251,72 @@ export default function PlayerPage() {
 
                           <div className="relative mt-3 flex items-center justify-between font-mono text-[11px] text-white/70">
                             <span>{formatTime(currentTime)}</span>
-                            <span className="rounded-full border border-white/15 bg-black/35 px-2 py-0.5 text-[10px] text-white/65">
-                              {isBuffering ? "Buffering..." : isMobileTimelineScrubbing ? "Release to seek" : "Drag anywhere"}
-                            </span>
+                            <div className="flex items-center gap-1.5 font-sans">
+                              <div ref={mobileVolumeControlRef} className="relative">
+                                <button
+                                  onClick={() => setShowVolumeControl((prev) => !prev)}
+                                  className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-white/75 transition ${
+                                    showVolumeControl
+                                      ? "border-[#e50914]/45 bg-[#e50914]/18 text-white"
+                                      : "border-white/15 bg-black/35 hover:border-white/35"
+                                  }`}
+                                  aria-label="Volume controls"
+                                  aria-expanded={showVolumeControl}
+                                >
+                                  {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                                </button>
+
+                                {showVolumeControl && (
+                                  <div className="absolute bottom-full left-1/2 z-20 mb-2 w-52 -translate-x-1/2 rounded-xl border border-white/15 bg-[linear-gradient(145deg,rgba(10,12,18,0.95),rgba(24,11,17,0.88))] p-3 shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={toggleMute}
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:text-[#ff6f7a]"
+                                        aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                                      >
+                                        {muted || volume === 0 ? (
+                                          <VolumeX className="h-3.5 w-3.5" />
+                                        ) : (
+                                          <Volume2 className="h-3.5 w-3.5" />
+                                        )}
+                                      </button>
+                                      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
+                                        <div
+                                          className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
+                                          style={{ width: `${muted ? 0 : volume * 100}%` }}
+                                        />
+                                        <input
+                                          type="range"
+                                          min="0"
+                                          max="1"
+                                          step="0.01"
+                                          value={muted ? 0 : volume}
+                                          onChange={handleVolumeChange}
+                                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                          aria-label="Volume"
+                                        />
+                                      </div>
+                                      <span className="w-9 text-right font-mono text-[10px] text-white/65">
+                                        {Math.round((muted ? 0 : volume) * 100)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <select
+                                value={playbackRate}
+                                onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                                aria-label="Playback speed"
+                                className="h-7 rounded-full border border-white/15 bg-black/35 px-2 text-[10px] text-white/80 focus:outline-none focus:ring-2 focus:ring-[#e50914]"
+                              >
+                                {PLAYBACK_RATES.map((speed) => (
+                                  <option key={speed} value={speed}>
+                                    {speed}x
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                             <span>-{formatTime(remainingTime)}</span>
                           </div>
                         </div>
@@ -1308,8 +1360,8 @@ export default function PlayerPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 sm:gap-3">
-                        <div ref={volumeControlRef} className="relative">
+                      <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 sm:flex sm:gap-3">
+                        <div ref={desktopVolumeControlRef} className="relative">
                           <button
                             onClick={() => setShowVolumeControl((prev) => !prev)}
                             className={`group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all ${
