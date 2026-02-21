@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { access, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { constants } from "node:fs";
+import { createReadStream, constants } from "node:fs";
+import { Readable } from "node:stream";
+import { access, mkdir, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
@@ -119,28 +120,7 @@ async function ensureRemuxedCacheFile(upstreamUrl: string): Promise<string | nul
     } catch (error) {
       console.warn("[Audio proxy] Failed to remux upstream audio, using passthrough.", error);
       await rm(tempPath, { force: true }).catch(() => {});
-      try {
-        const fallbackResponse = await fetch(upstreamUrl, {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (!fallbackResponse.ok) {
-          return null;
-        }
-
-        const fallbackBuffer = Buffer.from(await fallbackResponse.arrayBuffer());
-        if (fallbackBuffer.length === 0) {
-          return null;
-        }
-
-        await writeFile(tempPath, fallbackBuffer);
-        await rename(tempPath, cachePath);
-        return cachePath;
-      } catch (fallbackError) {
-        console.warn("[Audio proxy] Failed to cache upstream audio after remux failure.", fallbackError);
-        await rm(tempPath, { force: true }).catch(() => {});
-        return null;
-      }
+      return null;
     } finally {
       remuxInFlight.delete(cacheKey);
     }
@@ -159,8 +139,8 @@ function withCorsHeaders(headers: Headers): Headers {
 }
 
 async function serveCachedFile(filepath: string, rangeHeader: string | null) {
-  const fileBuffer = await readFile(filepath);
-  const fileSize = fileBuffer.length;
+  const fileStats = await stat(filepath);
+  const fileSize = fileStats.size;
 
   const baseHeaders = withCorsHeaders(new Headers({
     "Content-Type": "audio/mpeg",
@@ -181,19 +161,21 @@ async function serveCachedFile(filepath: string, rangeHeader: string | null) {
     }
 
     const { start, end } = parsedRange;
-    const chunk = fileBuffer.subarray(start, end + 1);
+    const chunkLength = end - start + 1;
+    const stream = createReadStream(filepath, { start, end });
 
-    return new NextResponse(chunk, {
+    return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
       status: 206,
       headers: withCorsHeaders(new Headers({
         ...Object.fromEntries(baseHeaders.entries()),
-        "Content-Length": chunk.length.toString(),
+        "Content-Length": chunkLength.toString(),
         "Content-Range": `bytes ${start}-${end}/${fileSize}`,
       })),
     });
   }
 
-  return new NextResponse(fileBuffer, {
+  const stream = createReadStream(filepath);
+  return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
     status: 200,
     headers: withCorsHeaders(new Headers({
       ...Object.fromEntries(baseHeaders.entries()),
