@@ -64,8 +64,9 @@ const getListeningProgressStorageKey = (id: number) => `${LISTENING_PROGRESS_PRE
 const getPreferredDuration = (metadataDuration: number, fallbackDuration: number) => {
   const safeMetadata = Number.isFinite(metadataDuration) && metadataDuration > 0 ? metadataDuration : 0;
   const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0;
-
-  return safeMetadata > 0 ? safeMetadata : safeFallback;
+  // Mobile browsers can occasionally report a short/truncated metadata duration.
+  // Prefer the larger valid value so we don't regress long-form playback timelines.
+  return Math.max(safeMetadata, safeFallback);
 };
 const getSeekableEnd = (audio: HTMLAudioElement) => {
   if (!audio.seekable || audio.seekable.length === 0) return 0;
