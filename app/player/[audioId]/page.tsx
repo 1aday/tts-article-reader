@@ -1130,19 +1130,6 @@ export default function PlayerPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(229,9,20,0.38),transparent_48%),linear-gradient(145deg,#0f1218,#1d2533)]" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
-                  <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-[#e50914]/10 border border-[#e50914]/30 px-3 py-1.5 backdrop-blur-md">
-                      <div className={`w-2 h-2 rounded-full ${isBuffering ? "bg-amber-400 animate-pulse" : "bg-[#e50914] animate-pulse"}`} />
-                      <span className="text-xs font-semibold tracking-[0.08em] text-[#ff4c54] uppercase">
-                        {isBuffering ? "Buffering" : playing ? "Now Playing" : "Ready"}
-                      </span>
-                    </div>
-                    {allAudioVersions.length > 1 && (
-                      <div className="rounded-full border border-white/25 bg-black/55 px-3 py-1 text-xs text-white/80 backdrop-blur-md">
-                        {allAudioVersions.length} versions
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="space-y-5 pt-1 lg:pb-2">
