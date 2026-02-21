@@ -498,11 +498,11 @@ export default function LibraryPage() {
             )}
 
             {/* Grid view with Netflix-style cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
               {filteredArticles.map((article, index) => (
                 <div
                   key={article.id}
-                  className={`group relative overflow-hidden rounded-xl bg-surface-1/90 border border-white/10 hover:border-[#e50914]/35 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
+                  className={`group relative overflow-hidden rounded-2xl bg-surface-1/90 border border-white/10 hover:border-[#e50914]/35 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
                   onClick={() => {
                     // Click card to open full player when audio exists
                     if (article.audioFiles.length > 0) {
@@ -513,7 +513,7 @@ export default function LibraryPage() {
                   }}
                 >
                   {/* Featured Image */}
-                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#e50914]/25 to-[#b20710]/25">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#e50914]/25 to-[#b20710]/25">
                     {(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) ? (
                       <img
                         src={(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) || ''}
@@ -588,9 +588,9 @@ export default function LibraryPage() {
                   </div>
 
                   {/* Article Info */}
-                  <div className="p-5 space-y-3.5">
+                  <div className="p-6 space-y-4">
                     <div className="space-y-2">
-                      <h3 className="text-lg sm:text-xl font-semibold text-white line-clamp-2 group-hover:text-[#ff6a70] transition-colors">
+                      <h3 className="text-xl sm:text-2xl font-semibold text-white line-clamp-2 group-hover:text-[#ff6a70] transition-colors">
                         {article.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/60">
@@ -618,7 +618,7 @@ export default function LibraryPage() {
                             className="flex-1 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white hover:opacity-90 font-semibold"
                           >
                             <Play className="w-3.5 h-3.5 mr-1.5" fill="white" />
-                            Play
+                            Open Player
                           </Button>
                           <Button
                             onClick={() => handleDownload(article.audioFiles[0].id)}
@@ -641,6 +641,16 @@ export default function LibraryPage() {
                         </Button>
                       )}
                     </div>
+
+                    {article.audioFiles.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/player/${article.audioFiles[0].id}`)}
+                        className="block w-full text-left text-[11px] text-white/45 hover:text-white/80 transition-colors"
+                      >
+                        {`Player URL: /player/${article.audioFiles[0].id}`}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
