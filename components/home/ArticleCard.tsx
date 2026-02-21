@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
 import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
 import { Clock3, Loader2, Play, Waves } from "lucide-react";
-import { usePlayer } from "@/contexts/PlayerContext";
 
 interface ArticleCardProps {
   article: Article & {
@@ -11,7 +10,6 @@ interface ArticleCardProps {
 }
 
 export function ArticleCard({ article }: ArticleCardProps) {
-  const { play } = usePlayer();
   const displayImage = hasPersistentGeneratedImage(article.generatedImageUrl)
     ? article.generatedImageUrl
     : article.imageUrl;
@@ -20,25 +18,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const isGenerating = article.imageGenerationStatus === "generating";
   const href = primaryAudioFile ? `/player/${primaryAudioFile.id}` : `/voice-select/${article.id}`;
 
-  const handleClick = () => {
-    if (!hasAudio) return;
-    const audioFile = primaryAudioFile;
-    if (!audioFile) return;
-    if (!audioFile.blobUrl) return;
-
-    play({
-      id: audioFile.id,
-      articleId: article.id,
-      articleTitle: article.title,
-      articleImageUrl: displayImage,
-      voiceName: audioFile.voiceName,
-      blobUrl: audioFile.blobUrl,
-      duration: audioFile.duration || 0,
-    });
-  };
-
   return (
-    <Link href={href} onClick={handleClick} className="netflix-carousel-item">
+    <Link href={href} className="netflix-carousel-item">
       <article className="netflix-card group">
         <div className="netflix-aspect-portrait overflow-hidden">
           {displayImage ? (
@@ -82,6 +63,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
                 </span>
               )}
             </div>
+            {hasAudio && primaryAudioFile && (
+              <p className="text-[10px] text-white/50">{`/player/${primaryAudioFile.id}`}</p>
+            )}
           </div>
         </div>
       </article>

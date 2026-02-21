@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Article, AudioFile } from "@/lib/db/schema";
 import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
 import { ArrowRight, Play, Sparkles, Volume2 } from "lucide-react";
-import { usePlayer } from "@/contexts/PlayerContext";
 
 interface FeaturedArticleHeroProps {
   article: Article & {
@@ -11,7 +10,6 @@ interface FeaturedArticleHeroProps {
 }
 
 export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
-  const { play } = usePlayer();
   const displayImage = hasPersistentGeneratedImage(article.generatedImageUrl)
     ? article.generatedImageUrl
     : article.imageUrl;
@@ -20,20 +18,6 @@ export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
   const summary = article.originalText
     ? `${article.originalText.slice(0, 220)}...`
     : "Turn this article into studio-grade narration and continue listening from any device.";
-
-  const handlePlay = () => {
-    if (!primaryAudioFile?.blobUrl) return;
-
-    play({
-      id: primaryAudioFile.id,
-      articleId: article.id,
-      articleTitle: article.title,
-      articleImageUrl: displayImage,
-      voiceName: primaryAudioFile.voiceName,
-      blobUrl: primaryAudioFile.blobUrl,
-      duration: primaryAudioFile.duration || 0,
-    });
-  };
 
   return (
     <section className="netflix-hero">
@@ -68,11 +52,10 @@ export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
           {hasAudio ? (
             <Link
               href={`/player/${primaryAudioFile!.id}`}
-              onClick={handlePlay}
               className="netflix-button netflix-button-primary"
             >
               <Play className="h-4 w-4" fill="white" />
-              Listen now
+              Open Player
             </Link>
           ) : (
             <Link href={`/voice-select/${article.id}`} className="netflix-button netflix-button-primary">
@@ -85,6 +68,15 @@ export function FeaturedArticleHero({ article }: FeaturedArticleHeroProps) {
             Explore library
           </Link>
         </div>
+
+        {hasAudio && (
+          <Link
+            href={`/player/${primaryAudioFile!.id}`}
+            className="mt-3 inline-block text-xs text-white/50 transition-colors hover:text-white/85"
+          >
+            {`Player URL: /player/${primaryAudioFile!.id}`}
+          </Link>
+        )}
       </div>
     </section>
   );
