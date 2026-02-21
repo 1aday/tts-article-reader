@@ -46,19 +46,20 @@ export function PersistentPlayer() {
     return formatDuration(seconds);
   };
 
-  const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
-  const remaining = Math.max(0, duration - currentTime);
+  const effectiveDuration = Math.max(duration, currentTime);
+  const progress = effectiveDuration > 0 ? Math.min(100, Math.max(0, (currentTime / effectiveDuration) * 100)) : 0;
+  const remaining = Math.max(0, effectiveDuration - currentTime);
 
   const skipTime = (seconds: number) => {
-    if (duration <= 0) return;
-    const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+    const upperBound = Math.max(effectiveDuration, currentTime + Math.max(seconds, 0));
+    const newTime = Math.max(0, Math.min(upperBound, currentTime + seconds));
     seek(newTime);
   };
 
   const handleProgressSeek = (percentage: number) => {
-    if (duration <= 0) return;
+    if (effectiveDuration <= 0) return;
     const clampedPercentage = Math.max(0, Math.min(1, percentage));
-    seek(clampedPercentage * duration);
+    seek(clampedPercentage * effectiveDuration);
   };
 
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -89,7 +90,7 @@ export function PersistentPlayer() {
           <input
             type="range"
             min="0"
-            max={duration || 0}
+            max={effectiveDuration || 0}
             step="0.1"
             value={currentTime}
             onChange={(e) => seek(Number(e.target.value))}
@@ -167,7 +168,7 @@ export function PersistentPlayer() {
             <div className="hidden items-center text-[11px] text-white/45 sm:flex">
               <span>{formatTime(currentTime)}</span>
               <span className="mx-1 text-white/30">/</span>
-              <span>{formatTime(duration)}</span>
+              <span>{formatTime(effectiveDuration)}</span>
               <span className="mx-1 text-white/25">·</span>
               <span>-{formatTime(remaining)}</span>
             </div>

@@ -55,11 +55,7 @@ const getPlaybackUrl = (blobUrl?: string | null) => {
     return normalizedUrl;
   }
 
-  if (normalizedUrl.startsWith("/")) {
-    return `/api/audio/proxy?url=${encodeURIComponent(normalizedUrl)}`;
-  }
-
-  return normalizedUrl;
+  return `/api/audio/proxy?url=${encodeURIComponent(normalizedUrl)}`;
 };
 const getListeningProgressStorageKey = (id: number) => `${LISTENING_PROGRESS_PREFIX}${id}`;
 const getPreferredDuration = (metadataDuration: number, fallbackDuration: number) => {
@@ -75,6 +71,23 @@ const getPreferredDuration = (metadataDuration: number, fallbackDuration: number
   }
 
   return safeMetadata;
+};
+const getSeekableEnd = (audio: HTMLAudioElement) => {
+  if (!audio.seekable || audio.seekable.length === 0) return 0;
+  const end = audio.seekable.end(audio.seekable.length - 1);
+  return Number.isFinite(end) && end > 0 ? end : 0;
+};
+const resolveDuration = (
+  audio: HTMLAudioElement,
+  fallbackDuration: number,
+  currentDuration = 0,
+  currentTime = audio.currentTime,
+) => {
+  const preferred = getPreferredDuration(audio.duration, fallbackDuration);
+  const seekableEnd = getSeekableEnd(audio);
+  const safeCurrentDuration = Number.isFinite(currentDuration) && currentDuration > 0 ? currentDuration : 0;
+  const safeCurrentTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : 0;
+  return Math.max(preferred, seekableEnd, safeCurrentDuration, safeCurrentTime);
 };
 
 const persistListeningProgress = (id: number, time: number) => {
@@ -348,8 +361,9 @@ export default function PlayerPage() {
       const audio = audioRef.current;
       if (!audio) return;
       const seekOffset = details.seekOffset ?? 10;
-      const safeDuration = Number.isFinite(audio.duration) ? audio.duration : (duration || audio.currentTime);
-      const nextTime = clamp(audio.currentTime - seekOffset, 0, safeDuration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const upperBound = Math.max(safeDuration, audio.currentTime);
+      const nextTime = clamp(audio.currentTime - seekOffset, 0, upperBound);
       audio.currentTime = nextTime;
       setCurrentTime(nextTime);
       persistListeningProgress(audioId, nextTime);
@@ -358,10 +372,9 @@ export default function PlayerPage() {
       const audio = audioRef.current;
       if (!audio) return;
       const seekOffset = details.seekOffset ?? 10;
-      const safeDuration = Number.isFinite(audio.duration)
-        ? audio.duration
-        : (duration || audio.currentTime);
-      const nextTime = clamp(audio.currentTime + seekOffset, 0, safeDuration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const upperBound = Math.max(safeDuration, audio.currentTime + seekOffset);
+      const nextTime = clamp(audio.currentTime + seekOffset, 0, upperBound);
       audio.currentTime = nextTime;
       setCurrentTime(nextTime);
       persistListeningProgress(audioId, nextTime);
@@ -369,10 +382,9 @@ export default function PlayerPage() {
     setActionHandler("seekto", (details) => {
       const audio = audioRef.current;
       if (!audio || typeof details.seekTime !== "number") return;
-      const safeDuration = Number.isFinite(audio.duration)
-        ? audio.duration
-        : (duration || details.seekTime);
-      const nextTime = clamp(details.seekTime, 0, safeDuration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const upperBound = Math.max(safeDuration, details.seekTime);
+      const nextTime = clamp(details.seekTime, 0, upperBound);
       if (typeof audio.fastSeek === "function" && details.fastSeek) {
         audio.fastSeek(nextTime);
       } else {
@@ -394,7 +406,7 @@ export default function PlayerPage() {
 
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
-    const safeDuration = Number.isFinite(duration) ? duration : 0;
+    const safeDuration = Math.max(duration, currentTime);
     if (!(safeDuration > 0) || !Number.isFinite(currentTime)) return;
 
     try {
@@ -459,7 +471,9 @@ export default function PlayerPage() {
       if (event.key === "ArrowLeft" || event.key.toLowerCase() === "j") {
         event.preventDefault();
         if (!audioRef.current) return;
-        const next = clamp(audioRef.current.currentTime - 10, 0, duration || audioRef.current.duration || 0);
+        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+        const upperBound = Math.max(safeDuration, audioRef.current.currentTime);
+        const next = clamp(audioRef.current.currentTime - 10, 0, upperBound);
         audioRef.current.currentTime = next;
         setCurrentTime(next);
         return;
@@ -468,7 +482,9 @@ export default function PlayerPage() {
       if (event.key === "ArrowRight" || event.key.toLowerCase() === "l") {
         event.preventDefault();
         if (!audioRef.current) return;
-        const next = clamp(audioRef.current.currentTime + 10, 0, duration || audioRef.current.duration || 0);
+        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+        const upperBound = Math.max(safeDuration, audioRef.current.currentTime + 10);
+        const next = clamp(audioRef.current.currentTime + 10, 0, upperBound);
         audioRef.current.currentTime = next;
         setCurrentTime(next);
         return;
@@ -505,7 +521,7 @@ export default function PlayerPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [duration, muted, playbackRate, volume]);
+  }, [audioData?.duration, duration, muted, playbackRate, volume]);
 
   const setupVisualizer = async () => {
     if (!audioRef.current || !canvasRef.current) return;
@@ -717,6 +733,15 @@ export default function PlayerPage() {
     if (audioRef.current) {
       const nextTime = audioRef.current.currentTime;
       setCurrentTime(nextTime);
+      const nextDuration = resolveDuration(
+        audioRef.current,
+        audioData?.duration || 0,
+        duration,
+        nextTime,
+      );
+      if (nextDuration > 0 && nextDuration - duration > 0.25) {
+        setDuration(nextDuration);
+      }
 
       const roundedSecond = Math.floor(nextTime);
       if (roundedSecond !== lastSavedSecondRef.current) {
@@ -728,12 +753,13 @@ export default function PlayerPage() {
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      const safeDuration = getPreferredDuration(audioRef.current.duration, audioData?.duration || 0);
+      const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
       setDuration(safeDuration);
+      const resumeUpperBound = safeDuration > 0 ? safeDuration : (audioData?.duration || 0);
 
       let didApplyHandoff = false;
       if (handoffTimeRef.current !== null && Number.isFinite(handoffTimeRef.current)) {
-        const handoffTime = clamp(handoffTimeRef.current, 0, Math.max(0, safeDuration));
+        const handoffTime = clamp(handoffTimeRef.current, 0, Math.max(0, resumeUpperBound || handoffTimeRef.current));
         audioRef.current.currentTime = handoffTime;
         setCurrentTime(handoffTime);
         lastSavedSecondRef.current = Math.floor(handoffTime);
@@ -745,7 +771,7 @@ export default function PlayerPage() {
         if (
           Number.isFinite(saved) &&
           saved > 1 &&
-          saved < Math.max(1, safeDuration - 2) &&
+          saved < (resumeUpperBound > 2 ? resumeUpperBound - 2 : Number.POSITIVE_INFINITY) &&
           !didApplyHandoff
         ) {
           audioRef.current.currentTime = saved;
@@ -769,6 +795,13 @@ export default function PlayerPage() {
       }
     }
   };
+  const handleDurationChange = () => {
+    if (!audioRef.current) return;
+    const nextDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+    if (nextDuration > 0 && nextDuration - duration > 0.25) {
+      setDuration(nextDuration);
+    }
+  };
 
   const handleEnded = () => {
     setPlaying(false);
@@ -783,10 +816,8 @@ export default function PlayerPage() {
 
   const seekTo = (time: number) => {
     if (!audioRef.current) return;
-    const safeDuration = Number.isFinite(duration) && duration > 0
-      ? duration
-      : (Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : time);
-    const nextTime = clamp(time, 0, safeDuration);
+    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration, time);
+    const nextTime = clamp(time, 0, Math.max(safeDuration, time));
     audioRef.current.currentTime = nextTime;
     setCurrentTime(nextTime);
     lastSavedSecondRef.current = Math.floor(nextTime);
@@ -798,10 +829,10 @@ export default function PlayerPage() {
   };
 
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!duration) return;
+    if (!effectiveDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const percentage = (e.clientX - rect.left) / rect.width;
-    seekTo(percentage * duration);
+    seekTo(percentage * effectiveDuration);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -830,8 +861,10 @@ export default function PlayerPage() {
   const skip = (seconds: number) => {
     if (!audioRef.current) return;
     const current = audioRef.current.currentTime;
-    const safeDuration = duration > 0 ? duration : audioRef.current.duration;
-    const upperBound = Number.isFinite(safeDuration) ? safeDuration : current + seconds;
+    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration, current);
+    const upperBound = Number.isFinite(safeDuration) && safeDuration > 0
+      ? Math.max(safeDuration, current + Math.max(seconds, 0))
+      : current + Math.max(seconds, 0);
     const nextTime = clamp(current + seconds, 0, upperBound);
     audioRef.current.currentTime = nextTime;
     setCurrentTime(nextTime);
@@ -1045,8 +1078,9 @@ export default function PlayerPage() {
     });
   };
 
-  const progressPercentage = duration > 0 ? clamp((currentTime / duration) * 100, 0, 100) : 0;
-  const remainingTime = Math.max(0, duration - currentTime);
+  const effectiveDuration = Math.max(duration, currentTime);
+  const progressPercentage = effectiveDuration > 0 ? clamp((currentTime / effectiveDuration) * 100, 0, 100) : 0;
+  const remainingTime = Math.max(0, effectiveDuration - currentTime);
   const articleCoverImage = hasPersistentGeneratedImage(article?.generatedImageUrl)
     ? article?.generatedImageUrl || null
     : article?.imageUrl || null;
@@ -1237,7 +1271,7 @@ export default function PlayerPage() {
                           <input
                             type="range"
                             min="0"
-                            max={duration || 0}
+                            max={effectiveDuration || 0}
                             step="0.1"
                             value={currentTime}
                             onChange={handleSeek}
@@ -1254,7 +1288,7 @@ export default function PlayerPage() {
                         <div className="flex justify-between font-mono text-xs text-white/60 sm:text-sm">
                           <span>{formatTime(currentTime)}</span>
                           <span>-{formatTime(remainingTime)}</span>
-                          <span>{formatTime(duration)}</span>
+                          <span>{formatTime(effectiveDuration)}</span>
                         </div>
                       </div>
 
@@ -1321,7 +1355,7 @@ export default function PlayerPage() {
                       </span>
                     )}
                     <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
-                      {formatTime(duration)}
+                      {formatTime(effectiveDuration)}
                     </span>
                     {audioData?.fileSize && (
                       <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5">
@@ -1370,6 +1404,7 @@ export default function PlayerPage() {
             src={audioUrl || undefined}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
+            onDurationChange={handleDurationChange}
             onEnded={handleEnded}
             onPlay={() => {
               setPlaying(true);
