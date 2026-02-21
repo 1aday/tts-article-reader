@@ -11,10 +11,92 @@ import { toast } from 'sonner';
 
 type ArticleWithAudio = Article & {
   audioFiles?: AudioFile[];
+  categories?: string[];
+  tags?: string[];
 };
 
 type FilterCategory = {
   name: string;
+};
+
+type HomeDataPayload = {
+  articles: ArticleWithAudio[];
+  categories: string[];
+};
+
+type HomeCache = HomeDataPayload & {
+  cachedAt: number;
+};
+
+const HOME_CACHE_TTL_MS = 90_000;
+
+let homeCache: HomeCache | null = null;
+let homeDataFetchPromise: Promise<HomeDataPayload> | null = null;
+
+const isHomeCacheFresh = (cache: HomeCache | null): cache is HomeCache =>
+  Boolean(cache && Date.now() - cache.cachedAt < HOME_CACHE_TTL_MS);
+
+const fetchHomeDataFromApi = async (): Promise<HomeDataPayload> => {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Request timeout')), 10000)
+  );
+
+  const fetchPromise = Promise.all([
+    fetch('/api/library'),
+    fetch('/api/library/filters'),
+  ]);
+
+  const [articlesRes, filtersRes] = (await Promise.race([
+    fetchPromise,
+    timeoutPromise,
+  ])) as [Response, Response];
+
+  if (!articlesRes.ok || !filtersRes.ok) {
+    throw new Error(`Request failed (${articlesRes.status}/${filtersRes.status})`);
+  }
+
+  const articlesData = await articlesRes.json();
+  const filtersData = await filtersRes.json();
+
+  if (!articlesData.success) {
+    throw new Error('Library request failed');
+  }
+
+  if (!filtersData.success) {
+    throw new Error('Filters request failed');
+  }
+
+  const filterCategories = (filtersData.categories ?? []) as FilterCategory[];
+
+  return {
+    articles: (articlesData.articles ?? []) as ArticleWithAudio[],
+    categories: filterCategories.map((category) => category.name),
+  };
+};
+
+const getHomeData = async (forceRefresh = false): Promise<HomeDataPayload> => {
+  if (!forceRefresh && isHomeCacheFresh(homeCache)) {
+    return {
+      articles: homeCache.articles,
+      categories: homeCache.categories,
+    };
+  }
+
+  if (!homeDataFetchPromise) {
+    homeDataFetchPromise = fetchHomeDataFromApi()
+      .then((payload) => {
+        homeCache = {
+          ...payload,
+          cachedAt: Date.now(),
+        };
+        return payload;
+      })
+      .finally(() => {
+        homeDataFetchPromise = null;
+      });
+  }
+
+  return homeDataFetchPromise;
 };
 
 export default function Home() {
@@ -23,91 +105,74 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [generatingImages, setGeneratingImages] = useState(false);
 
+  const applyHomeData = (data: HomeDataPayload) => {
+    setArticles(data.articles);
+    setCategories(data.categories);
+  };
+
   useEffect(() => {
     async function fetchData() {
-      try {
-        console.log('[Home] Starting data fetch...');
+      const cachedData = homeCache
+        ? {
+            articles: homeCache.articles,
+            categories: homeCache.categories,
+          }
+        : null;
 
-        // Add timeout to prevent infinite loading
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Request timeout')), 10000)
+      if (cachedData) {
+        applyHomeData(cachedData);
+        setLoading(false);
+      }
+
+      const shouldRefresh = !isHomeCacheFresh(homeCache);
+      if (!shouldRefresh) return;
+
+      try {
+        const fetchedData = await getHomeData(true);
+        const fetchedArticles = fetchedData.articles;
+        applyHomeData(fetchedData);
+
+        // Auto-categorize articles without categories
+        const needsCategorization = fetchedArticles.filter((article) =>
+          !article.categoriesJson &&
+          (!article.categorizationStatus ||
+            article.categorizationStatus === 'pending' ||
+            article.categorizationStatus === 'failed')
         );
 
-        const fetchPromise = Promise.all([
-          fetch('/api/library'),
-          fetch('/api/library/filters')
-        ]);
-
-        const [articlesRes, filtersRes] = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ]) as [Response, Response];
-
-        console.log('[Home] Fetch responses received:', {
-          articlesStatus: articlesRes.status,
-          filtersStatus: filtersRes.status
-        });
-
-        const articlesData = await articlesRes.json();
-        const filtersData = await filtersRes.json();
-
-        console.log('[Home] Data parsed:', {
-          articlesSuccess: articlesData.success,
-          articleCount: articlesData.articles?.length,
-          filtersSuccess: filtersData.success,
-          categoryCount: filtersData.categories?.length
-        });
-
-        if (articlesData.success) {
-          const fetchedArticles = (articlesData.articles ?? []) as ArticleWithAudio[];
-          setArticles(fetchedArticles);
-
-          // Auto-categorize articles without categories
-          const needsCategorization = fetchedArticles.filter((article) =>
-            !article.categoriesJson &&
-            (!article.categorizationStatus ||
-              article.categorizationStatus === 'pending' ||
-              article.categorizationStatus === 'failed')
-          );
-
-          console.log('[Home] Articles needing categorization:', needsCategorization.length);
-
-          if (needsCategorization.length > 0) {
-            categorizeMissingArticles(needsCategorization);
-          }
-
-          // Auto-generate images for articles without them
-          const needsImages = fetchedArticles.filter((article) =>
-            !hasPersistentGeneratedImage(article.generatedImageUrl) &&
-            (!article.imageGenerationStatus ||
-              article.imageGenerationStatus === 'pending' ||
-              article.imageGenerationStatus === 'failed')
-          );
-
-          console.log('[Home] Articles needing images:', needsImages.length);
-
-          if (needsImages.length > 0) {
-            generateMissingImages(false); // Auto-generate only missing
-          }
+        if (needsCategorization.length > 0) {
+          categorizeMissingArticles(needsCategorization);
         }
 
-        if (filtersData.success) {
-          const filterCategories = (filtersData.categories ?? []) as FilterCategory[];
-          setCategories(filterCategories.map((category) => category.name));
+        // Auto-generate images for articles without them
+        const needsImages = fetchedArticles.filter((article) =>
+          !hasPersistentGeneratedImage(article.generatedImageUrl) &&
+          (!article.imageGenerationStatus ||
+            article.imageGenerationStatus === 'pending' ||
+            article.imageGenerationStatus === 'failed')
+        );
+
+        if (needsImages.length > 0) {
+          generateMissingImages(false); // Auto-generate only missing
         }
       } catch (error) {
         console.error('[Home] Failed to fetch data:', error);
-        toast.error(
-          `Failed to load library: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          { duration: 5000 }
-        );
+        if (!cachedData) {
+          toast.error(
+            `Failed to load library: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            { duration: 5000 }
+          );
+        }
       } finally {
-        console.log('[Home] Setting loading to false');
-        setLoading(false);
+        if (!cachedData) {
+          setLoading(false);
+        }
       }
     }
 
     fetchData();
+    // Intentional one-time bootstrap load with module-level cache.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const categorizeMissingArticles = async (articlesToCategorize: Array<{ id: number }>) => {
@@ -129,19 +194,12 @@ export default function Home() {
 
     // Refresh articles and categories after categorization
     setTimeout(async () => {
-      const articlesRes = await fetch('/api/library');
-      const filtersRes = await fetch('/api/library/filters');
-      const articlesData = await articlesRes.json();
-      const filtersData = await filtersRes.json();
-
-      if (articlesData.success) {
-        setArticles(articlesData.articles);
+      try {
+        const refreshedData = await getHomeData(true);
+        applyHomeData(refreshedData);
+      } catch (error) {
+        console.error('[Home] Failed to refresh after categorization:', error);
       }
-      if (filtersData.success) {
-        const filterCategories = (filtersData.categories ?? []) as FilterCategory[];
-        setCategories(filterCategories.map((category) => category.name));
-      }
-      console.log('[Home] Refreshed after categorization');
     }, 3000); // Wait 3 seconds for categorization to complete
   };
 
@@ -182,12 +240,8 @@ export default function Home() {
         }
 
         // Refresh articles after generation
-        const articlesRes = await fetch('/api/library');
-        const articlesData = await articlesRes.json();
-        if (articlesData.success) {
-          setArticles(articlesData.articles);
-          console.log('[Home] Articles refreshed after generation');
-        }
+        const refreshedData = await getHomeData(true);
+        applyHomeData(refreshedData);
       } else {
         throw new Error(data.error || 'Generation failed');
       }
@@ -297,9 +351,15 @@ export default function Home() {
 
         {categories.map(category => {
           const categoryArticles = articles.filter(article => {
+            if (Array.isArray(article.categories)) {
+              return article.categories.includes(category);
+            }
+
+            if (!article.categoriesJson) return false;
+
             try {
-              const cats = article.categoriesJson ? JSON.parse(article.categoriesJson) : [];
-              return cats.includes(category);
+              const parsed = JSON.parse(article.categoriesJson);
+              return Array.isArray(parsed) && parsed.includes(category);
             } catch {
               return false;
             }

@@ -1100,7 +1100,7 @@ export default function PlayerPage() {
 
             <div className="relative px-4 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-7 lg:px-9">
               <div className="grid gap-6 lg:grid-cols-[1.25fr_0.95fr] lg:items-start">
-                <div className="seamless-media-frame relative mx-auto aspect-[3/4] w-full max-w-[20rem] overflow-hidden rounded-[30px] sm:max-w-[24rem] lg:mx-0 lg:max-w-[28rem]">
+                <div className="seamless-media-frame relative mx-auto aspect-[3/4] w-full max-w-[20rem] overflow-hidden rounded-[30px] sm:max-w-[24rem] lg:mx-0 lg:max-w-none">
                   {articleCoverImage ? (
                     <div
                       className="absolute inset-0 bg-cover bg-center"
