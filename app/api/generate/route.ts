@@ -1,4 +1,9 @@
 import { NextRequest } from "next/server";
+import { spawn } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { enhanceText } from "@/lib/api/openai";
 import { generateSpeech } from "@/lib/api/elevenlabs";
@@ -9,6 +14,8 @@ import { eq } from "drizzle-orm";
 import { rateLimits, getClientIp, formatRateLimitError } from "@/lib/rate-limit";
 import { getVoiceName, isDisplayVoiceName } from "@/lib/voice-names";
 import { DEFAULT_VOICE_AUDIO_SETTINGS } from "@/lib/audio-settings";
+import { estimateMp3DurationSeconds } from "@/lib/audio-duration";
+import { mergeMp3Chunks } from "@/lib/mp3-utils";
 
 export const maxDuration = 300;
 
@@ -17,8 +24,64 @@ const ELEVENLABS_MAX_RETRIES = 2;
 const RETRY_DELAY_BASE_MS = 1_500;
 const ENHANCEMENT_TIMEOUT_MS = 5 * 60 * 1000;
 const ELEVENLABS_MODEL_ID = "eleven_v3";
+const ELEVENLABS_OUTPUT_FORMAT = "mp3_44100_128";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", args, {
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+
+    let stderr = "";
+    ffmpeg.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    ffmpeg.on("error", (error) => {
+      reject(error);
+    });
+
+    ffmpeg.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`ffmpeg exited with code ${code}: ${stderr.trim() || "unknown error"}`));
+    });
+  });
+}
+
+async function remuxMp3Buffer(input: Buffer): Promise<Buffer | null> {
+  const tempDir = await mkdtemp(join(tmpdir(), "tts-remux-"));
+  const inputPath = join(tempDir, `${randomUUID()}.mp3`);
+  const outputPath = join(tempDir, `${randomUUID()}-remux.mp3`);
+
+  try {
+    await writeFile(inputPath, input);
+    await runFfmpeg([
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-i",
+      inputPath,
+      "-c",
+      "copy",
+      outputPath,
+    ]);
+
+    const remuxed = await readFile(outputPath);
+    return remuxed.length > 0 ? remuxed : null;
+  } catch (error) {
+    console.warn("[Generate] ffmpeg remux unavailable, falling back to direct MP3 merge.", error);
+    return null;
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
 
 const generateSchema = z.object({
   articleId: z.number(),
@@ -391,6 +454,7 @@ export async function POST(request: NextRequest) {
                   model_id: ELEVENLABS_MODEL_ID,
                   voice_settings: voiceSettings,
                   timeoutMs: ELEVENLABS_REQUEST_TIMEOUT_MS,
+                  output_format: ELEVENLABS_OUTPUT_FORMAT,
                 });
 
                 audioBuffers[i] = buffer; // Maintain correct order
@@ -509,8 +573,19 @@ export async function POST(request: NextRequest) {
           });
 
           const validBuffers = audioBuffers.filter((b): b is Buffer => b !== null);
-          const audioBuffer = Buffer.concat(validBuffers);
-          const fileSizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(2);
+          if (validBuffers.length !== chunks.length) {
+            throw new Error(
+              `Audio merge mismatch: expected ${chunks.length} chunks, received ${validBuffers.length}`
+            );
+          }
+
+          const mergedAudioBuffer = mergeMp3Chunks(validBuffers);
+          const remuxedAudioBuffer = chunks.length > 1
+            ? await remuxMp3Buffer(mergedAudioBuffer)
+            : null;
+          const finalAudioBuffer = remuxedAudioBuffer ?? mergedAudioBuffer;
+          const estimatedDurationSeconds = estimateMp3DurationSeconds(finalAudioBuffer.length);
+          const fileSizeMB = (finalAudioBuffer.length / (1024 * 1024)).toFixed(2);
 
           emitEvent({
             type: "progress",
@@ -524,13 +599,13 @@ export async function POST(request: NextRequest) {
             .set({
               status: "uploading",
               progress: 80,
-              currentStep: "Uploading audio",
+              currentStep: remuxedAudioBuffer ? "Remuxed and uploading audio" : "Uploading audio",
               updatedAt: new Date(),
             })
             .where(eq(processingJobs.id, job.id));
 
           const filename = `article-${articleId}-${voiceId}-${Date.now()}.mp3`;
-          const blobUrl = await uploadAudio(audioBuffer, filename);
+          const blobUrl = await uploadAudio(finalAudioBuffer, filename);
 
           emitEvent({
             type: "progress",
@@ -546,8 +621,8 @@ export async function POST(request: NextRequest) {
               voiceId,
               voiceName: resolvedVoiceName,
               blobUrl,
-              duration: 0, // TODO: Calculate actual duration
-              fileSize: audioBuffer.length,
+              duration: estimatedDurationSeconds,
+              fileSize: finalAudioBuffer.length,
               status: "completed",
             })
             .returning();

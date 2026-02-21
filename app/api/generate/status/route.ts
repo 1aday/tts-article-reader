@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { processingJobs, audioFiles } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { resolveAudioDurationSeconds } from "@/lib/audio-duration";
 
 const ACTIVE_STATUSES = new Set(["pending", "enhancing", "generating", "uploading"]);
 const JOB_STALE_TIMEOUT_MS = 6 * 60 * 1000;
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       audioFile: audioFile ? {
         id: audioFile.id,
         blobUrl: audioFile.blobUrl,
-        duration: audioFile.duration,
+        duration: resolveAudioDurationSeconds(audioFile.duration, audioFile.fileSize),
         fileSize: audioFile.fileSize,
       } : null,
     });

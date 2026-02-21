@@ -4,6 +4,7 @@ import { audioFiles, voices } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { deleteAudio } from "@/lib/storage/blob-storage";
 import { getVoiceName, isDisplayVoiceName } from "@/lib/voice-names";
+import { resolveAudioDurationSeconds } from "@/lib/audio-duration";
 
 export async function GET(
   request: NextRequest,
@@ -44,12 +45,14 @@ export async function GET(
     }
 
     // Return metadata for client-side player
+    const resolvedDuration = resolveAudioDurationSeconds(audioFile.duration, audioFile.fileSize);
+
     return NextResponse.json({
       id: audioFile.id,
       articleId: audioFile.articleId,
       voiceId: audioFile.voiceId,
       blobUrl: audioFile.blobUrl,
-      duration: audioFile.duration,
+      duration: resolvedDuration,
       fileSize: audioFile.fileSize,
       voiceName: displayVoiceName,
       status: audioFile.status,

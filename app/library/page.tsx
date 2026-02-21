@@ -383,27 +383,27 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
+    <div className="relative min-h-screen overflow-hidden bg-[#141414] pt-20">
       {/* Netflix Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
-      <div className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 ${currentTrack && isStickyPlayerVisible ? 'pb-40 sm:pb-32' : ''}`}>
+      <div className={`relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16 ${currentTrack && isStickyPlayerVisible ? 'pb-40 sm:pb-32' : ''}`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-12 sm:mb-16 md:mb-20 animate-fadeInDown">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-12 lg:mb-14 animate-fadeInDown">
           <div className="space-y-2 sm:space-y-3">
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
+            <h1 className="font-display text-4xl leading-[0.96] text-white tracking-[0.03em] sm:text-5xl md:text-6xl lg:text-7xl">
               Library
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#d2d2d2] leading-relaxed">
               Your saved articles and audio files • <span className="text-[#e50914] font-semibold">{articles.length}</span> {articles.length === 1 ? "article" : "articles"}
             </p>
           </div>
-          <div className="flex gap-2 sm:gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:flex lg:w-auto">
             <Button
               onClick={() => router.push("/create")}
               size="lg"
-              className="netflix-button netflix-button-primary font-semibold shadow-lg"
+              className="netflix-button netflix-button-primary w-full font-semibold shadow-lg lg:w-auto"
             >
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">New Article</span>
@@ -414,32 +414,35 @@ export default function LibraryPage() {
                 onClick={handleBulkRefreshImages}
                 disabled={bulkRefreshing}
                 size="lg"
-                className="netflix-button netflix-button-secondary font-semibold shadow-lg disabled:opacity-50"
+                className="netflix-button netflix-button-secondary w-full font-semibold shadow-lg disabled:opacity-50 lg:w-auto"
                 title="Fetch images for all articles with URLs"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${bulkRefreshing ? "animate-spin" : ""}`} />
                 <span className="hidden lg:inline">Refresh Images</span>
                 <span className="hidden sm:inline lg:hidden">Images</span>
+                <span className="sm:hidden">Refresh</span>
               </Button>
             )}
             <Button
               onClick={handleBulkGenerateImages}
               disabled={bulkGenerating}
               size="lg"
-              className="netflix-button netflix-button-secondary font-semibold shadow-lg disabled:opacity-50"
+              className="netflix-button netflix-button-secondary w-full font-semibold shadow-lg disabled:opacity-50 lg:w-auto"
               title="Generate AI images for all articles"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${bulkGenerating ? "animate-spin" : ""}`} />
               <span className="hidden lg:inline">Generate AI Images</span>
               <span className="hidden sm:inline lg:hidden">AI Images</span>
+              <span className="sm:hidden">Generate</span>
             </Button>
             <Button
               size="lg"
               onClick={() => router.push("/")}
-              className="bg-transparent text-white/70 hover:text-white hover:bg-white/10 border-0"
+              className="w-full border border-white/15 bg-transparent text-white/70 hover:bg-white/10 hover:text-white lg:w-auto lg:border-0"
+              aria-label="Go to home"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Home</span>
+              <span>Home</span>
             </Button>
           </div>
         </div>

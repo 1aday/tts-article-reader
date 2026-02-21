@@ -334,11 +334,11 @@ export default function Home() {
       <div className="space-y-8 pt-8 md:space-y-12 md:pt-12">
         <section className="netflix-row">
           <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-surface-1/85 via-surface-2/75 to-surface-1/85 px-5 py-4 shadow-lg sm:px-6">
-            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.1em] text-white/65 sm:text-sm">
+            <div className="grid gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-white/65 sm:flex sm:flex-wrap sm:items-center sm:gap-3 sm:text-sm">
               <span>{articles.length} saved articles</span>
-              <span className="h-1 w-1 rounded-full bg-white/30" />
+              <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
               <span>{categories.length} active categories</span>
-              <span className="h-1 w-1 rounded-full bg-white/30" />
+              <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
               <span>{articlesWithAudio.length} ready to listen</span>
             </div>
           </div>

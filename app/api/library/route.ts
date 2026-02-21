@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { articles, audioFiles, voices } from "@/lib/db/schema";
 import { desc, inArray } from "drizzle-orm";
 import { getVoiceName, isDisplayVoiceName } from "@/lib/voice-names";
+import { resolveAudioDurationSeconds } from "@/lib/audio-duration";
 
 const parseJsonArray = (value: string | null): string[] => {
   if (!value) return [];
@@ -98,7 +99,7 @@ export async function GET() {
             ? audio.voiceName.trim()
             : fallbackVoiceName,
           blobUrl: audio.blobUrl,
-          duration: audio.duration,
+          duration: resolveAudioDurationSeconds(audio.duration, audio.fileSize),
           fileSize: audio.fileSize,
           status: audio.status,
           createdAt: audio.createdAt,

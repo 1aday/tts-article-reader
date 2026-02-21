@@ -581,14 +581,14 @@ export default function GeneratePage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#07090d] pt-16">
+    <div className="relative min-h-screen overflow-hidden bg-[#07090d] pt-20">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.2),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(229,9,20,0.08),transparent_55%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#07090d]/80 to-[#07090d]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.07] bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_50%,transparent_100%)]" />
 
-      <main className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
-        <section className="hero-panel relative mb-6 overflow-hidden rounded-3xl p-6 sm:p-8">
+      <main className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+        <section className="hero-panel relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-7 lg:p-8">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(229,9,20,0.16),transparent_35%),radial-gradient(circle_at_100%_100%,rgba(229,9,20,0.1),transparent_45%)]" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff4a55]/80 to-transparent" />
           <div className="relative grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
@@ -597,7 +597,7 @@ export default function GeneratePage() {
                 Audio Generation
               </div>
 
-              <h1 className="font-display text-5xl leading-none text-transparent bg-clip-text bg-gradient-to-b from-white to-white/75 drop-shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:text-6xl md:text-7xl">
+              <h1 className="bg-gradient-to-b from-white to-white/75 bg-clip-text font-display text-4xl leading-[1.02] text-transparent drop-shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:text-5xl md:text-6xl lg:text-7xl">
                 {error ? "Generation Failed" : isComplete ? "Audio Ready" : "Building Audio"}
               </h1>
 

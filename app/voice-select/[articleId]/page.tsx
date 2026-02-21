@@ -249,15 +249,15 @@ export default function VoiceSelectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
+    <div className="relative min-h-screen overflow-hidden bg-[#141414] pt-20">
       {/* Netflix Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
+            <h1 className="font-display text-4xl leading-[0.96] text-white tracking-[0.03em] sm:text-5xl md:text-6xl lg:text-7xl">
               Select Voice
             </h1>
             <p className="text-sm sm:text-base text-white/60">
@@ -267,6 +267,7 @@ export default function VoiceSelectPage() {
           <Button
             variant="ghost"
             onClick={() => router.back()}
+            aria-label="Go back"
             className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -307,16 +308,16 @@ export default function VoiceSelectPage() {
 
         {/* Search and Filter Bar */}
         <div className="mb-6 space-y-4">
-          <div className="flex gap-3">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <Input
-                placeholder="Search voices by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 h-11 rounded-xl"
-              />
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {/* Search */}
+              <div className="relative min-w-0 w-full sm:flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  placeholder="Search voices by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 rounded-xl border-white/10 bg-white/5 pl-10 text-white placeholder:text-white/40 sm:h-11"
+                />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
@@ -328,32 +329,34 @@ export default function VoiceSelectPage() {
             </div>
 
             {/* Filter Toggle */}
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`border-2 h-11 rounded-xl font-semibold transition-all ${
-                showFilters || hasActiveFilters
-                  ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
-                  : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
-              }`}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`h-10 rounded-xl border-2 px-3 font-semibold transition-all sm:h-11 ${
+                  showFilters || hasActiveFilters
+                    ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
+                    : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
+                }`}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
 
             {/* Settings Toggle */}
-            <Button
-              variant="outline"
-              onClick={() => setShowSettings(!showSettings)}
-              className={`border-2 h-11 rounded-xl font-semibold transition-all ${
-                showSettings
-                  ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
-                  : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
-              }`}
-            >
-              <Sliders className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Settings</span>
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowSettings(!showSettings)}
+                aria-label={showSettings ? "Hide audio settings" : "Show audio settings"}
+                className={`h-10 rounded-xl border-2 px-3 font-semibold transition-all sm:h-11 ${
+                  showSettings
+                    ? "border-[#e50914] text-[#e50914] bg-[#e50914]/10"
+                    : "border-white/20 text-white/70 hover:border-white/30 hover:text-white"
+                }`}
+              >
+                <Sliders className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Settings</span>
+                <span className="sm:hidden">Audio</span>
+              </Button>
           </div>
 
           {/* Filter Chips */}

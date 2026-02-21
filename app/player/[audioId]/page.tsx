@@ -12,6 +12,7 @@ import { VoiceSelector } from "@/components/voice-selector";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { AudioSettingsPanel } from "@/components/audio-settings-panel";
 import { DEFAULT_GENERATION_AUDIO_SETTINGS } from "@/lib/audio-settings";
+import { formatDuration } from "@/lib/audio-duration";
 import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
 import { usePlayer } from "@/contexts/PlayerContext";
 
@@ -44,7 +45,37 @@ const PLAYBACK_RATE_STORAGE_KEY = "tts-full-player-playback-rate";
 const LISTENING_PROGRESS_PREFIX = "tts-full-player-progress-";
 const GENERATED_COVER_MEDIA_SESSION_SIZE = "768x1024";
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const getPlaybackUrl = (blobUrl?: string | null) => {
+  if (!blobUrl) return null;
+
+  const normalizedUrl = blobUrl.trim();
+  if (!normalizedUrl) return null;
+
+  if (normalizedUrl.startsWith("/api/audio/proxy?url=")) {
+    return normalizedUrl;
+  }
+
+  if (normalizedUrl.startsWith("/")) {
+    return `/api/audio/proxy?url=${encodeURIComponent(normalizedUrl)}`;
+  }
+
+  return normalizedUrl;
+};
 const getListeningProgressStorageKey = (id: number) => `${LISTENING_PROGRESS_PREFIX}${id}`;
+const getPreferredDuration = (metadataDuration: number, fallbackDuration: number) => {
+  const safeMetadata = Number.isFinite(metadataDuration) && metadataDuration > 0 ? metadataDuration : 0;
+  const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0;
+
+  if (safeMetadata <= 0) return safeFallback;
+  if (safeFallback <= 0) return safeMetadata;
+
+  const ratio = safeMetadata / safeFallback;
+  if (ratio < 0.75 || ratio > 1.25) {
+    return safeFallback;
+  }
+
+  return safeMetadata;
+};
 
 const persistListeningProgress = (id: number, time: number) => {
   if (typeof window === "undefined" || !Number.isFinite(time)) return;
@@ -89,7 +120,6 @@ export default function PlayerPage() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showActionsCard, setShowActionsCard] = useState(false);
-  const [showSpeedControls, setShowSpeedControls] = useState(false);
 
   // Regeneration panel state
   const [showRegeneratePanel, setShowRegeneratePanel] = useState(false);
@@ -619,11 +649,7 @@ export default function PlayerPage() {
       }
 
       const data: AudioFile = await response.json();
-      const playbackUrl = !data.blobUrl
-        ? null
-        : data.blobUrl.startsWith("/api/audio/proxy?url=")
-          ? data.blobUrl
-          : `/api/audio/proxy?url=${encodeURIComponent(data.blobUrl)}`;
+      const playbackUrl = getPlaybackUrl(data.blobUrl);
       setAudioUrl(playbackUrl);
       setAudioData(data);
       setSelectedVoiceId(data.voiceId);
@@ -702,9 +728,7 @@ export default function PlayerPage() {
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      const safeDuration = Number.isFinite(audioRef.current.duration)
-        ? audioRef.current.duration
-        : (audioData?.duration || 0);
+      const safeDuration = getPreferredDuration(audioRef.current.duration, audioData?.duration || 0);
       setDuration(safeDuration);
 
       let didApplyHandoff = false;
@@ -754,10 +778,7 @@ export default function PlayerPage() {
   };
 
   const formatTime = (time: number) => {
-    if (!Number.isFinite(time) || time < 0) return "0:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    return formatDuration(time);
   };
 
   const seekTo = (time: number) => {
@@ -823,7 +844,15 @@ export default function PlayerPage() {
     if (!originalAudioUrl) return;
 
     try {
-      const response = await fetch(`/api/audio/proxy?url=${encodeURIComponent(originalAudioUrl)}`);
+      const downloadableUrl = getPlaybackUrl(originalAudioUrl);
+      if (!downloadableUrl) {
+        throw new Error("Audio URL unavailable");
+      }
+
+      const response = await fetch(downloadableUrl);
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1063,7 +1092,7 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#141414] px-3 pb-10 pt-16 sm:px-5">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#141414] pb-28 pt-20 sm:pb-32">
       {/* Netflix Background gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
@@ -1084,9 +1113,9 @@ export default function PlayerPage() {
         ))}
       </div>
 
-      <div className="relative mx-auto max-w-6xl py-6 sm:py-8">
-        <div className="space-y-8 sm:space-y-10">
-          <section className="seamless-panel relative overflow-hidden rounded-[40px]">
+      <div className="relative w-full px-3 py-4 sm:px-5 sm:py-6 lg:px-8 xl:px-10">
+        <div className="space-y-6 sm:space-y-8">
+          <section className="seamless-panel relative overflow-hidden rounded-[32px] sm:rounded-[40px]">
             {articleCoverImage ? (
               <div
                 className="absolute inset-0 opacity-45 bg-cover bg-center scale-110 blur-[3px]"
@@ -1099,8 +1128,8 @@ export default function PlayerPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.3),transparent_45%)]" />
 
             <div className="relative px-4 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-7 lg:px-9">
-              <div className="grid gap-6 lg:grid-cols-[1.25fr_0.95fr] lg:items-start">
-                <div className="seamless-media-frame relative mx-auto aspect-[3/4] w-full max-w-[20rem] overflow-hidden rounded-[30px] sm:max-w-[24rem] lg:mx-0 lg:max-w-none">
+              <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+                <div className="seamless-media-frame relative mx-auto aspect-[3/4] w-full max-w-[20rem] overflow-hidden rounded-[30px] sm:max-w-[24rem] lg:mx-0 lg:max-w-[36rem] xl:max-w-[40rem]">
                   {articleCoverImage ? (
                     <div
                       className="absolute inset-0 bg-cover bg-center"
@@ -1125,28 +1154,23 @@ export default function PlayerPage() {
                   </div>
                 </div>
 
-                <div className="space-y-5 lg:pb-2">
+                <div className="space-y-5 pt-1 lg:pb-2">
                   <div className="space-y-2">
                     <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-white/58">
                       {audioData?.voiceName || "Voice narration"}
                     </p>
-                    <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[0.92] text-white tracking-[0.02em]">
+                    <h1 className="font-display text-3xl leading-[1.02] text-white tracking-[0.02em] sm:text-5xl lg:text-6xl">
                       {articleTitle}
                     </h1>
                   </div>
 
-                  <div className="seamless-subpanel space-y-5 rounded-[24px] p-4 sm:p-5">
-                    {/* Visualizer */}
-                    <div className="seamless-media-frame relative h-32 overflow-hidden rounded-[20px] sm:h-36">
+                  <div className="space-y-4 rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_75%_35%,rgba(229,9,20,0.14),transparent_52%),linear-gradient(160deg,rgba(10,12,18,0.68),rgba(8,10,16,0.44))] px-4 py-4 shadow-[0_24px_56px_rgba(0,0,0,0.34)] sm:px-5 sm:py-5">
+                    <div className="relative h-24 overflow-hidden rounded-2xl sm:h-28">
                       <div
-                        className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(229,9,20,0.18),transparent_60%)] transition-opacity duration-300 ${
-                          playing ? "opacity-100" : "opacity-60"
+                        className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(229,9,20,0.22),transparent_62%)] transition-opacity duration-300 ${
+                          playing ? "opacity-100" : "opacity-65"
                         }`}
                       />
-                      <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/55">
-                        <span className={`h-1.5 w-1.5 rounded-full ${playing ? "bg-[#e50914] animate-pulse" : "bg-white/35"}`} />
-                        Visualizer
-                      </div>
                       <canvas
                         ref={canvasRef}
                         width={800}
@@ -1155,15 +1179,14 @@ export default function PlayerPage() {
                       />
                       {!playing && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="rounded-full border border-white/10 bg-black/45 px-4 py-2 text-xs text-white/45 sm:text-sm">
-                            {isBuffering ? "Buffering audio..." : "Audio visualizer will appear during playback"}
+                          <div className="rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/45">
+                            {isBuffering ? "Buffering audio..." : "Visualizer appears while playing"}
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Main Controls */}
-                    <div className="space-y-5 sm:space-y-6">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-center gap-4 sm:gap-6">
                         <button
                           onClick={() => skip(-10)}
@@ -1215,6 +1238,7 @@ export default function PlayerPage() {
                             type="range"
                             min="0"
                             max={duration || 0}
+                            step="0.1"
                             value={currentTime}
                             onChange={handleSeek}
                             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -1234,76 +1258,52 @@ export default function PlayerPage() {
                         </div>
                       </div>
 
-                      <div className="seamless-subpanel space-y-2 rounded-[18px] px-3 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <button
-                            onClick={toggleMute}
-                            className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10"
-                            aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-                          >
-                            {muted || volume === 0 ? (
-                              <VolumeX className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
-                            ) : (
-                              <Volume2 className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
-                            )}
-                          </button>
+                      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 sm:gap-3">
+                        <button
+                          onClick={toggleMute}
+                          className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10"
+                          aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                        >
+                          {muted || volume === 0 ? (
+                            <VolumeX className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                          ) : (
+                            <Volume2 className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                          )}
+                        </button>
 
-                          <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
-                              style={{ width: `${muted ? 0 : volume * 100}%` }}
-                            />
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.01"
-                              value={muted ? 0 : volume}
-                              onChange={handleVolumeChange}
-                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                              aria-label="Volume"
-                            />
-                          </div>
-                          <span className="w-9 shrink-0 text-right font-mono text-[11px] text-white/55">
-                            {Math.round((muted ? 0 : volume) * 100)}%
-                          </span>
-
-                          <button
-                            onClick={() => setShowSpeedControls((prev) => !prev)}
-                            aria-expanded={showSpeedControls}
-                            aria-label={showSpeedControls ? "Hide playback speeds" : "Show playback speeds"}
-                            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/75 transition-all hover:bg-white/10"
-                          >
-                            {playbackRate}x
-                            {showSpeedControls ? (
-                              <ChevronUp className="h-3.5 w-3.5" />
-                            ) : (
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            )}
-                          </button>
+                        <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
+                            style={{ width: `${muted ? 0 : volume * 100}%` }}
+                          />
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={muted ? 0 : volume}
+                            onChange={handleVolumeChange}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                            aria-label="Volume"
+                          />
                         </div>
 
-                        {showSpeedControls && (
-                          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
-                            {PLAYBACK_RATES.map((speed) => (
-                              <button
-                                key={speed}
-                                onClick={() => {
-                                  setPlaybackRate(speed);
-                                  setShowSpeedControls(false);
-                                }}
-                                aria-label={`Set speed to ${speed}x`}
-                                className={`h-8 rounded-md px-2 text-[11px] font-medium transition-all ${
-                                  playbackRate === speed
-                                    ? "bg-[#e50914] text-white shadow-lg shadow-[#e50914]/25"
-                                    : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                                }`}
-                              >
-                                {speed}x
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <span className="w-8 shrink-0 text-right font-mono text-[10px] text-white/55 sm:w-10 sm:text-[11px]">
+                          {Math.round((muted ? 0 : volume) * 100)}%
+                        </span>
+
+                        <select
+                          value={playbackRate}
+                          onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                          aria-label="Playback speed"
+                          className="h-8 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] text-white/80 focus:outline-none focus:ring-2 focus:ring-[#e50914]"
+                        >
+                          {PLAYBACK_RATES.map((speed) => (
+                            <option key={speed} value={speed}>
+                              {speed}x
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>

@@ -41,6 +41,20 @@ const LISTENING_PROGRESS_PREFIX = "tts-player-progress-";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+const getPreferredDuration = (metadataDuration: number, fallbackDuration: number) => {
+  const safeMetadata = Number.isFinite(metadataDuration) && metadataDuration > 0 ? metadataDuration : 0;
+  const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0;
+
+  if (safeMetadata <= 0) return safeFallback;
+  if (safeFallback <= 0) return safeMetadata;
+
+  const ratio = safeMetadata / safeFallback;
+  if (ratio < 0.75 || ratio > 1.25) {
+    return safeFallback;
+  }
+
+  return safeMetadata;
+};
 
 const getInitialVolume = () => {
   if (typeof window === "undefined") return 1;
@@ -68,6 +82,10 @@ const getInitialPlaybackRate = () => {
 
 const getListeningProgressStorageKey = (trackId: number) =>
   `${LISTENING_PROGRESS_PREFIX}${trackId}`;
+const buildPlaybackUrl = (url: string) =>
+  url.startsWith("/api/audio/proxy?url=")
+    ? url
+    : `/api/audio/proxy?url=${encodeURIComponent(url)}`;
 
 const persistListeningProgress = (trackId: number, time: number) => {
   if (typeof window === "undefined" || !Number.isFinite(time)) return;
@@ -164,9 +182,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const handleLoadedMetadata = () => {
       const track = currentTrackRef.current;
-      const safeDuration = Number.isFinite(audio.duration)
-        ? audio.duration
-        : (track?.duration || 0);
+      const safeDuration = getPreferredDuration(audio.duration, track?.duration || 0);
 
       setDuration(safeDuration);
 
@@ -419,7 +435,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setIsBuffering(true);
     lastSavedSecondRef.current = -1;
 
-    audio.src = track.blobUrl;
+    audio.src = buildPlaybackUrl(track.blobUrl);
     audio.load();
 
     void audio.play().catch((error) => {

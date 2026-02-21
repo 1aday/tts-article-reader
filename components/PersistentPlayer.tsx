@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Loader2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, Waves, X, Music2 } from "lucide-react";
+import { formatDuration } from "@/lib/audio-duration";
 
 export function PersistentPlayer() {
   const {
@@ -42,10 +43,7 @@ export function PersistentPlayer() {
   }
 
   const formatTime = (seconds: number) => {
-    if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return formatDuration(seconds);
   };
 
   const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
@@ -63,137 +61,154 @@ export function PersistentPlayer() {
     seek(clampedPercentage * duration);
   };
 
+  const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const cyclePlaybackRate = () => {
+    const index = playbackRates.findIndex((rate) => Math.abs(rate - playbackRate) < 0.001);
+    const nextRate = playbackRates[(index + 1) % playbackRates.length];
+    setPlaybackRate(nextRate);
+  };
+  const currentVolume = muted ? 0 : volume;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#090d14]/95 backdrop-blur-2xl animate-slideInFromBottom">
-      <div
-        className="relative h-1 cursor-pointer bg-white/10"
-        onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const percentage = (e.clientX - rect.left) / rect.width;
-          handleProgressSeek(percentage);
-        }}
-      >
+    <div className="fixed inset-x-2 bottom-2 z-50 sm:inset-x-3 md:inset-x-4 lg:inset-x-5">
+      <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(135deg,rgba(9,13,20,0.97),rgba(12,17,28,0.92))] shadow-[0_16px_52px_rgba(0,0,0,0.56)] backdrop-blur-2xl animate-slideInFromBottom">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_100%_at_50%_120%,rgba(229,9,20,0.16),transparent_66%)]" />
+
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#e50914] to-[#b20710] transition-all"
-          style={{ width: `${progress}%` }}
-        />
-        <input
-          type="range"
-          min="0"
-          max={duration || 0}
-          step="0.1"
-          value={currentTime}
-          onChange={(e) => seek(Number(e.target.value))}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          aria-label="Seek playback"
-        />
-      </div>
-
-      <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
-        <Link href={`/player/${currentTrack.id}`} className="flex min-w-0 items-center gap-3 sm:max-w-md group">
-          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-white/15 bg-surface-2">
-            {currentTrack.articleImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={currentTrack.articleImageUrl}
-                alt={currentTrack.articleTitle}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <Waves className="h-5 w-5 text-[#e50914]" />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white group-hover:text-[#ff6a70] transition-colors">
-              {currentTrack.articleTitle}
-            </p>
-            <p className="truncate text-xs text-white/55">{currentTrack.voiceName}</p>
-          </div>
-        </Link>
-
-        <div className="flex flex-1 flex-col items-center gap-2 sm:max-w-xl">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => skipTime(-10)}
-              className="text-white/65 transition hover:text-white"
-              title="Rewind 10 seconds"
-              aria-label="Rewind 10 seconds"
-            >
-              <SkipBack className="h-5 w-5" />
-            </button>
-            <button
-              onClick={isPlaying ? pause : resume}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#e50914] to-[#b20710] text-white shadow-[0_10px_24px_rgba(229,9,20,0.4)] transition hover:brightness-110"
-              aria-label={isPlaying ? "Pause" : "Play"}
-            >
-              {isBuffering ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="h-5 w-5" fill="white" />
-              ) : (
-                <Play className="h-5 w-5" fill="white" />
-              )}
-            </button>
-            <button
-              onClick={() => skipTime(10)}
-              className="text-white/65 transition hover:text-white"
-              title="Forward 10 seconds"
-              aria-label="Forward 10 seconds"
-            >
-              <SkipForward className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="text-xs text-white/55 flex items-center gap-2">
-            {formatTime(currentTime)} <span className="mx-1 text-white/35">/</span> {formatTime(duration)}
-            <span className="text-white/35">·</span>
-            <span>-{formatTime(remaining)}</span>
-          </div>
+          className="relative h-0.5 cursor-pointer bg-white/8"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const percentage = (e.clientX - rect.left) / rect.width;
+            handleProgressSeek(percentage);
+          }}
+        >
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#e50914] to-[#b20710] transition-all"
+            style={{ width: `${progress}%` }}
+          />
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.1"
+            value={currentTime}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Seek playback"
+          />
         </div>
 
-        <div className="flex items-center justify-between gap-4 sm:justify-end sm:max-w-md">
-          <select
-            value={playbackRate}
-            onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
-            className="rounded-lg border border-white/15 bg-surface-2 px-2 py-1.5 text-xs font-semibold text-white/80 focus:outline-none focus:ring-2 focus:ring-[#e50914]"
-            aria-label="Playback speed"
-          >
-            <option value="0.5">0.5x</option>
-            <option value="0.75">0.75x</option>
-            <option value="1">1x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="1.75">1.75x</option>
-            <option value="2">2x</option>
-          </select>
+        <div className="relative mx-auto grid w-full max-w-[1700px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-4">
+          <Link href={`/player/${currentTrack.id}`} className="group flex min-w-0 items-center gap-2.5">
+            <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border border-white/15 bg-surface-2 sm:h-11 sm:w-11">
+              {currentTrack.articleImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentTrack.articleImageUrl}
+                  alt={currentTrack.articleTitle}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Waves className="h-4 w-4 text-[#e50914]" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white/90 transition-colors group-hover:text-[#ff7c81]">
+                {currentTrack.articleTitle}
+              </p>
+              <p className="truncate text-[11px] text-white/45">{currentTrack.voiceName}</p>
+            </div>
+          </Link>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleMute}
-              className="text-white/65 transition hover:text-white"
-              aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-            >
-              {muted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={muted ? 0 : volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/15 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-              aria-label="Volume"
-            />
-          </div>
           <button
             onClick={closeStickyPlayer}
-            className="rounded-full border border-white/15 p-1.5 text-white/65 transition hover:border-white/35 hover:text-white"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/12 text-white/55 transition hover:border-white/30 hover:text-white sm:hidden"
             aria-label="Close mini player"
             title="Close mini player"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
+          </button>
+
+          <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-1.5 sm:col-span-1 sm:justify-center sm:gap-2">
+            <button
+              onClick={() => skipTime(-10)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-white/55 transition hover:border-white/15 hover:text-white"
+              title="Rewind 10 seconds"
+              aria-label="Rewind 10 seconds"
+            >
+              <SkipBack className="h-[18px] w-[18px]" />
+            </button>
+
+            <button
+              onClick={isPlaying ? pause : resume}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-[#e50914] to-[#c10812] text-white shadow-[0_8px_18px_rgba(229,9,20,0.35)] transition hover:brightness-110"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isBuffering ? (
+                <Loader2 className="h-[18px] w-[18px] animate-spin" />
+              ) : isPlaying ? (
+                <Pause className="h-[18px] w-[18px]" fill="white" />
+              ) : (
+                <Play className="h-[18px] w-[18px]" fill="white" />
+              )}
+            </button>
+
+            <button
+              onClick={() => skipTime(10)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-white/55 transition hover:border-white/15 hover:text-white"
+              title="Forward 10 seconds"
+              aria-label="Forward 10 seconds"
+            >
+              <SkipForward className="h-[18px] w-[18px]" />
+            </button>
+
+            <div className="hidden items-center text-[11px] text-white/45 sm:flex">
+              <span>{formatTime(currentTime)}</span>
+              <span className="mx-1 text-white/30">/</span>
+              <span>{formatTime(duration)}</span>
+              <span className="mx-1 text-white/25">·</span>
+              <span>-{formatTime(remaining)}</span>
+            </div>
+
+            <button
+              onClick={cyclePlaybackRate}
+              className="inline-flex h-7 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 text-[11px] font-medium text-white/65 transition hover:border-white/22 hover:text-white"
+              aria-label="Cycle playback speed"
+              title={`Playback speed ${playbackRate}x`}
+            >
+              {playbackRate}x
+            </button>
+
+            <div className="inline-flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] pl-1.5 pr-2">
+              <button
+                onClick={toggleMute}
+                className="inline-flex h-5 w-5 items-center justify-center text-white/55 transition hover:text-white"
+                aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+              >
+                {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={currentVolume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="h-1 w-12 cursor-pointer appearance-none rounded-full bg-white/15 sm:w-14 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/90 [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(255,255,255,0.08)]"
+                aria-label="Volume"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={closeStickyPlayer}
+            className="hidden h-8 w-8 items-center justify-center rounded-full border border-white/12 text-white/55 transition hover:border-white/30 hover:text-white sm:inline-flex"
+            aria-label="Close mini player"
+            title="Close mini player"
+          >
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

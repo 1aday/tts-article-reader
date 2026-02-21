@@ -26,7 +26,23 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch audio: ${response.statusText}`);
+      const errorPayload = await response.text().catch(() => "");
+      const responseHeaders = new Headers({
+        "content-type": response.headers.get("content-type") || "application/json",
+        "cache-control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Range",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+      });
+
+      return new NextResponse(
+        errorPayload || JSON.stringify({ error: "Failed to fetch audio file" }),
+        {
+          status: response.status,
+          headers: responseHeaders,
+        }
+      );
     }
 
     const responseHeaders = new Headers();

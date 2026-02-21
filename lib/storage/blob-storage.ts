@@ -7,7 +7,6 @@ import { put, del } from "@vercel/blob";
 // - Development: Local filesystem (./storage/audio)
 // - Production: Vercel Blob Storage (persistent, CDN-backed)
 
-const isProduction = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 const canUseBlobStorage = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 const STORAGE_DIR = join(process.cwd(), "storage", "audio");
 
@@ -17,14 +16,32 @@ async function ensureStorageDir() {
   }
 }
 
+function isLocalDatabaseConnection(): boolean {
+  const connectionString =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    "";
+
+  if (!connectionString) {
+    return true;
+  }
+
+  return (
+    connectionString.includes("localhost") ||
+    connectionString.includes("127.0.0.1")
+  );
+}
+
 export async function uploadAudio(
   buffer: Buffer,
   filename: string
 ): Promise<string> {
-  const shouldUseBlobStorage = isProduction && canUseBlobStorage;
+  const shouldUseBlobStorage = canUseBlobStorage;
 
   if (shouldUseBlobStorage) {
-    // Production: Use Vercel Blob Storage when token is available
+    // Use Vercel Blob Storage whenever token is available so URLs are portable across environments.
     try {
       console.log("[Blob Storage] Attempting upload:", {
         filename,
@@ -49,11 +66,14 @@ export async function uploadAudio(
       throw new Error(`Failed to upload audio file to storage: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    if (isProduction && !canUseBlobStorage) {
-      console.warn("[Blob Storage] BLOB_READ_WRITE_TOKEN missing. Falling back to local storage.");
+    // If a shared/remote DB is being used, local filesystem URLs become unreadable on other environments.
+    if (!isLocalDatabaseConnection()) {
+      throw new Error(
+        "BLOB_READ_WRITE_TOKEN is required when using a remote database. Refusing to save non-portable local audio path."
+      );
     }
 
-    // Local fallback: Use filesystem
+    // Local fallback: Use filesystem only for local database workflows.
     await ensureStorageDir();
     const filepath = join(STORAGE_DIR, filename);
     await writeFile(filepath, buffer);
@@ -69,11 +89,10 @@ export function getAudioPath(filename: string): string {
 export async function deleteAudio(blobUrl: string): Promise<void> {
   try {
     const isLocalPath = blobUrl.startsWith("/storage/audio/");
-    const shouldUseBlobStorage = isProduction && canUseBlobStorage && !isLocalPath;
+    const shouldUseBlobStorage = canUseBlobStorage && !isLocalPath;
 
     if (shouldUseBlobStorage) {
-      // Production: Delete from Vercel Blob
-      // blobUrl is the full Vercel Blob URL
+      // Blob URL deletion
       await del(blobUrl);
     } else {
       // Local storage: Delete from filesystem

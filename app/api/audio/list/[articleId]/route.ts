@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { audioFiles, voices } from "@/lib/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { getVoiceName, isDisplayVoiceName } from "@/lib/voice-names";
+import { resolveAudioDurationSeconds } from "@/lib/audio-duration";
 
 export async function GET(
   request: NextRequest,
@@ -37,6 +38,7 @@ export async function GET(
 
         return {
           ...audio,
+          duration: resolveAudioDurationSeconds(audio.duration, audio.fileSize),
           voiceName: isDisplayVoiceName(audio.voiceName, audio.voiceId)
             ? audio.voiceName!.trim()
             : fallbackVoiceName,

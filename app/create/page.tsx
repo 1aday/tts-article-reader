@@ -72,15 +72,15 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#141414] relative overflow-hidden pt-16">
+    <div className="relative min-h-screen overflow-hidden bg-[#141414] pt-20">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,0.15),transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#141414] to-[#000000]" />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
+      <div className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
         {/* Header */}
-        <div className="flex items-center justify-between mb-12 sm:mb-16 md:mb-20 animate-fadeInDown">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-12 sm:flex-row sm:items-start sm:justify-between md:mb-14 animate-fadeInDown">
           <div className="space-y-2 sm:space-y-3">
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white tracking-[0.03em]">
+            <h1 className="font-display text-4xl leading-[0.96] text-white tracking-[0.03em] sm:text-5xl md:text-6xl lg:text-7xl">
               New Article
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#d2d2d2] leading-relaxed">
@@ -91,7 +91,8 @@ export default function CreatePage() {
             <Button
               variant="ghost"
               size="lg"
-              className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl text-sm sm:text-base"
+              aria-label="Go back home"
+              className="self-start rounded-xl text-sm text-white/60 hover:bg-white/10 hover:text-white sm:text-base"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Back</span>

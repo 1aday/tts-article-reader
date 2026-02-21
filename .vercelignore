@@ -31,5 +31,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Local visual audit artifacts
+.audit-*.png
+.codex-*.png
+.postfix-*.png
+
 # Drizzle migrations (generated on server)
 /drizzle
