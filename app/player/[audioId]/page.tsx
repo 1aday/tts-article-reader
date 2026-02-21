@@ -971,10 +971,14 @@ export default function PlayerPage() {
   const seekTimelineFromClientX = (
     clientX: number,
     element: HTMLDivElement,
-    options?: { persistProgress?: boolean },
+    options?: { persistProgress?: boolean; previewOnly?: boolean },
   ) => {
     const nextTime = resolveTimelineTimeFromClientX(clientX, element);
     if (nextTime === undefined) return;
+    if (options?.previewOnly) {
+      setMobileTimelinePreviewTime(nextTime);
+      return;
+    }
     if (options?.persistProgress === false) {
       setMobileTimelinePreviewTime(nextTime);
     }
@@ -1000,12 +1004,12 @@ export default function PlayerPage() {
     activeMobileTimelinePointerIdRef.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsMobileTimelineScrubbing(true);
-    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: false });
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { previewOnly: true });
   };
   const handleMobileTimelinePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (activeMobileTimelinePointerIdRef.current !== event.pointerId) return;
     event.preventDefault();
-    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: false });
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { previewOnly: true });
   };
   const finishMobileTimelineScrub = (
     event: React.PointerEvent<HTMLDivElement>,
@@ -1235,7 +1239,6 @@ export default function PlayerPage() {
                               if (!Number.isFinite(next)) return;
                               setIsMobileTimelineScrubbing(true);
                               setMobileTimelinePreviewTime(next);
-                              seekTo(next, { persistProgress: false });
                             }}
                             onChange={(event) => {
                               handleSeek(event.currentTarget.value);
