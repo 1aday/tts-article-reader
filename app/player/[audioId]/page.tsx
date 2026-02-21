@@ -1144,7 +1144,7 @@ export default function PlayerPage() {
                     </h1>
                   </div>
 
-                  <div className="space-y-4 rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_75%_35%,rgba(229,9,20,0.14),transparent_52%),linear-gradient(160deg,rgba(10,12,18,0.68),rgba(8,10,16,0.44))] px-4 py-4 shadow-[0_24px_56px_rgba(0,0,0,0.34)] sm:px-5 sm:py-5">
+                  <div className="space-y-4 sm:rounded-[24px] sm:border sm:border-white/10 sm:bg-[radial-gradient(circle_at_75%_35%,rgba(229,9,20,0.14),transparent_52%),linear-gradient(160deg,rgba(10,12,18,0.68),rgba(8,10,16,0.44))] sm:px-5 sm:py-5 sm:shadow-[0_24px_56px_rgba(0,0,0,0.34)]">
                     <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-center gap-4 sm:gap-6">
                         <button
@@ -1184,10 +1184,7 @@ export default function PlayerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        <div className={`seek-lab relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(10,12,18,0.9),rgba(19,10,16,0.78))] px-3.5 py-3.5 sm:hidden ${playing ? "is-playing" : ""} ${isMobileTimelineScrubbing ? "is-scrubbing" : ""}`}>
-                          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_30%,rgba(255,76,108,0.32),transparent_55%),radial-gradient(circle_at_88%_78%,rgba(58,118,255,0.2),transparent_52%)]" />
-                          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
+                        <div className={`seek-lab relative sm:hidden ${playing ? "is-playing" : ""} ${isMobileTimelineScrubbing ? "is-scrubbing" : ""}`}>
                           <div
                             className="seek-lab-track relative touch-none"
                             onPointerDown={handleMobileTimelinePointerDown}
@@ -1238,75 +1235,76 @@ export default function PlayerPage() {
                             aria-label="Seek audio timeline"
                           />
 
-                          <div className="relative mt-3 flex items-center justify-between font-mono text-[11px] text-white/70">
+                          <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-white/70">
                             <span>{formatTime(currentTime)}</span>
-                            <div className="flex items-center gap-1.5 font-sans">
-                              <div ref={mobileVolumeControlRef} className="relative">
-                                <button
-                                  onClick={() => setShowVolumeControl((prev) => !prev)}
-                                  className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-white/75 transition ${
-                                    showVolumeControl
-                                      ? "border-[#e50914]/45 bg-[#e50914]/18 text-white"
-                                      : "border-white/15 bg-black/35 hover:border-white/35"
-                                  }`}
-                                  aria-label="Volume controls"
-                                  aria-expanded={showVolumeControl}
-                                >
-                                  {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-                                </button>
-
-                                {showVolumeControl && (
-                                  <div className="absolute bottom-full left-1/2 z-20 mb-2 w-52 -translate-x-1/2 rounded-xl border border-white/15 bg-[linear-gradient(145deg,rgba(10,12,18,0.95),rgba(24,11,17,0.88))] p-3 shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={toggleMute}
-                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:text-[#ff6f7a]"
-                                        aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-                                      >
-                                        {muted || volume === 0 ? (
-                                          <VolumeX className="h-3.5 w-3.5" />
-                                        ) : (
-                                          <Volume2 className="h-3.5 w-3.5" />
-                                        )}
-                                      </button>
-                                      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
-                                        <div
-                                          className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
-                                          style={{ width: `${muted ? 0 : volume * 100}%` }}
-                                        />
-                                        <input
-                                          type="range"
-                                          min="0"
-                                          max="1"
-                                          step="0.01"
-                                          value={muted ? 0 : volume}
-                                          onChange={handleVolumeChange}
-                                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                          aria-label="Volume"
-                                        />
-                                      </div>
-                                      <span className="w-9 text-right font-mono text-[10px] text-white/65">
-                                        {Math.round((muted ? 0 : volume) * 100)}%
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <select
-                                value={playbackRate}
-                                onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
-                                aria-label="Playback speed"
-                                className="h-7 rounded-full border border-white/15 bg-black/35 px-2 text-[10px] text-white/80 focus:outline-none focus:ring-2 focus:ring-[#e50914]"
-                              >
-                                {PLAYBACK_RATES.map((speed) => (
-                                  <option key={speed} value={speed}>
-                                    {speed}x
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
                             <span>-{formatTime(remainingTime)}</span>
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-end gap-1.5 font-sans">
+                            <div ref={mobileVolumeControlRef} className="relative">
+                              <button
+                                onClick={() => setShowVolumeControl((prev) => !prev)}
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-white/75 transition ${
+                                  showVolumeControl
+                                    ? "border-[#e50914]/45 bg-[#e50914]/18 text-white"
+                                    : "border-white/15 bg-black/35 hover:border-white/35"
+                                }`}
+                                aria-label="Volume controls"
+                                aria-expanded={showVolumeControl}
+                              >
+                                {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                              </button>
+
+                              {showVolumeControl && (
+                                <div className="absolute bottom-full right-0 z-20 mb-2 w-52 rounded-xl border border-white/15 bg-[linear-gradient(145deg,rgba(10,12,18,0.95),rgba(24,11,17,0.88))] p-3 shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={toggleMute}
+                                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:text-[#ff6f7a]"
+                                      aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                                    >
+                                      {muted || volume === 0 ? (
+                                        <VolumeX className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <Volume2 className="h-3.5 w-3.5" />
+                                      )}
+                                    </button>
+                                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
+                                      <div
+                                        className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
+                                        style={{ width: `${muted ? 0 : volume * 100}%` }}
+                                      />
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.01"
+                                        value={muted ? 0 : volume}
+                                        onChange={handleVolumeChange}
+                                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                        aria-label="Volume"
+                                      />
+                                    </div>
+                                    <span className="w-9 text-right font-mono text-[10px] text-white/65">
+                                      {Math.round((muted ? 0 : volume) * 100)}%
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <select
+                              value={playbackRate}
+                              onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                              aria-label="Playback speed"
+                              className="h-8 rounded-full border border-white/15 bg-black/35 px-2.5 text-[11px] text-white/80 focus:outline-none focus:ring-2 focus:ring-[#e50914]"
+                            >
+                              {PLAYBACK_RATES.map((speed) => (
+                                <option key={speed} value={speed}>
+                                  {speed}x
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
 
@@ -1911,7 +1909,7 @@ export default function PlayerPage() {
         }
         .seek-lab-track {
           position: relative;
-          height: 44px;
+          height: 34px;
           border-radius: 999px;
         }
         .seek-lab-track-base {
@@ -1919,7 +1917,7 @@ export default function PlayerPage() {
           left: 0;
           right: 0;
           top: 50%;
-          height: 12px;
+          height: 8px;
           transform: translateY(-50%);
           border-radius: 999px;
           background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
@@ -1931,8 +1929,8 @@ export default function PlayerPage() {
           position: absolute;
           left: 0;
           top: 50%;
-          height: 12px;
-          min-width: 12px;
+          height: 8px;
+          min-width: 8px;
           transform: translateY(-50%);
           border-radius: 999px;
           background: linear-gradient(90deg, #ff6f8b 0%, #ff3c59 45%, #ff1f3f 100%);
@@ -1958,18 +1956,18 @@ export default function PlayerPage() {
         .seek-lab-marker {
           position: absolute;
           top: 50%;
-          width: 2px;
-          height: 8px;
+          width: 1.5px;
+          height: 6px;
           border-radius: 999px;
           transform: translate(-50%, -50%);
           background: rgba(255, 255, 255, 0.45);
-          opacity: 0.55;
+          opacity: 0.45;
         }
         .seek-lab-thumb {
           position: absolute;
           top: 50%;
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           border-radius: 999px;
           transform: translate(-50%, -50%);
           border: 1px solid rgba(255, 255, 255, 0.28);
@@ -1981,17 +1979,17 @@ export default function PlayerPage() {
           transition: transform 150ms ease, box-shadow 180ms ease;
         }
         .seek-lab-thumb-core {
-          width: 11px;
-          height: 11px;
+          width: 8px;
+          height: 8px;
           border-radius: 999px;
           background: radial-gradient(circle at 35% 30%, #ffffff, #ffd2da);
           box-shadow:
-            0 0 0 3px rgba(255, 76, 108, 0.2),
-            0 0 12px rgba(255, 76, 108, 0.4);
+            0 0 0 2px rgba(255, 76, 108, 0.2),
+            0 0 10px rgba(255, 76, 108, 0.4);
         }
         .seek-lab-bubble {
           position: absolute;
-          top: 2px;
+          top: -2px;
           transform: translate(-50%, -106%);
           border-radius: 999px;
           border: 1px solid rgba(255, 255, 255, 0.18);
@@ -2016,7 +2014,7 @@ export default function PlayerPage() {
           animation: seekLabPulse 1.8s ease-in-out infinite;
         }
         .seek-lab.is-scrubbing .seek-lab-thumb {
-          transform: translate(-50%, -50%) scale(1.08);
+          transform: translate(-50%, -50%) scale(1.05);
         }
         .seek-lab.is-scrubbing .seek-lab-track-fill {
           transition: none;
