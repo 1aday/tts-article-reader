@@ -21,6 +21,7 @@ import { StageDetailsCard } from "@/components/generation/StageDetailsCard";
 import { AudioSizeSparkline } from "@/components/generation/AudioSizeSparkline";
 import { DetailedStatsTable } from "@/components/generation/DetailedStatsTable";
 import { DEFAULT_VOICE_AUDIO_SETTINGS, parseAudioSettingParam } from "@/lib/audio-settings";
+import { downloadAudioFile } from "@/lib/download-audio";
 
 const ACTIVE_JOB_STATUSES = new Set(["pending", "enhancing", "generating", "uploading"]);
 type GenerationStage = "enhance" | "generate" | "upload" | "complete";
@@ -523,18 +524,12 @@ export default function GeneratePage() {
       if (!audioFileId) {
         throw new Error("Audio file is not ready for download");
       }
-
-      const url = `/api/audio/${audioFileId}/download`;
-      const a = document.createElement("a");
-      a.href = url;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await downloadAudioFile(audioFileId);
 
       toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download audio");
+      toast.error(error instanceof Error ? error.message : "Failed to download audio");
     }
   };
 

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { FilterBar } from "@/components/library/FilterBar";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
+import { downloadAudioFile } from "@/lib/download-audio";
 import { usePlayer } from "@/contexts/PlayerContext";
 
 interface AudioFile {
@@ -85,16 +86,11 @@ export default function LibraryPage() {
 
   const handleDownload = async (audioId: number) => {
     try {
-      const url = `/api/audio/${audioId}/download`;
-      const a = document.createElement("a");
-      a.href = url;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await downloadAudioFile(audioId);
       toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download audio");
+      toast.error(error instanceof Error ? error.message : "Failed to download audio");
     }
   };
 

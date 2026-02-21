@@ -13,6 +13,7 @@ import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { AudioSettingsPanel } from "@/components/audio-settings-panel";
 import { DEFAULT_GENERATION_AUDIO_SETTINGS } from "@/lib/audio-settings";
 import { formatDuration } from "@/lib/audio-duration";
+import { downloadAudioFile } from "@/lib/download-audio";
 import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
 import { usePlayer } from "@/contexts/PlayerContext";
 
@@ -870,16 +871,11 @@ export default function PlayerPage() {
 
   const handleDownload = async () => {
     try {
-      const url = `/api/audio/${audioId}/download`;
-      const a = document.createElement("a");
-      a.href = url;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await downloadAudioFile(audioId);
       toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download audio");
+      toast.error(error instanceof Error ? error.message : "Failed to download audio");
     }
   };
 
