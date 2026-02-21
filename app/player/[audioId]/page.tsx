@@ -173,6 +173,11 @@ export default function PlayerPage() {
   const lastSavedSecondRef = useRef(-1);
   const handoffTimeRef = useRef<number | null>(null);
   const handoffShouldAutoplayRef = useRef(false);
+  const isPlayingRef = useRef(false);
+
+  useEffect(() => {
+    isPlayingRef.current = playing;
+  }, [playing]);
 
   useEffect(() => {
     try {
@@ -543,7 +548,7 @@ export default function PlayerPage() {
 
       if (!analyzerRef.current) {
         const analyzer = audioContext.createAnalyser();
-        analyzer.fftSize = 512;
+        analyzer.fftSize = window.matchMedia("(max-width: 640px)").matches ? 256 : 512;
         analyzer.smoothingTimeConstant = 0.85;
         analyzer.minDecibels = -95;
         analyzer.maxDecibels = -10;
@@ -577,10 +582,17 @@ export default function PlayerPage() {
     const bufferLength = analyzer.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     const waveformArray = new Uint8Array(bufferLength);
+    let lastFrameTime = 0;
+    const frameIntervalMs = 1000 / 30;
 
-    const draw = () => {
-      if (!playing) return;
+    const draw = (timestamp: number) => {
+      if (!isPlayingRef.current || !audioRef.current || audioRef.current.paused) {
+        animationFrameRef.current = null;
+        return;
+      }
       animationFrameRef.current = requestAnimationFrame(draw);
+      if (timestamp - lastFrameTime < frameIntervalMs) return;
+      lastFrameTime = timestamp;
 
       const nextWidth = canvas.clientWidth || 1;
       const nextHeight = canvas.clientHeight || 1;
@@ -601,7 +613,7 @@ export default function PlayerPage() {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const mirroredBarCount = 64;
+      const mirroredBarCount = window.matchMedia("(max-width: 640px)").matches ? 40 : 64;
       const sampleStep = Math.max(1, Math.floor(bufferLength / mirroredBarCount));
       const barGap = canvas.width / mirroredBarCount;
       const halfHeight = canvas.height / 2;
@@ -644,7 +656,7 @@ export default function PlayerPage() {
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-    draw();
+    animationFrameRef.current = requestAnimationFrame(draw);
   };
 
   const loadAudio = async () => {
@@ -824,15 +836,10 @@ export default function PlayerPage() {
     persistListeningProgress(audioId, nextTime);
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    seekTo(parseFloat(e.target.value));
-  };
-
-  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!effectiveDuration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percentage = (e.clientX - rect.left) / rect.width;
-    seekTo(percentage * effectiveDuration);
+  const handleSeek = (rawValue: string) => {
+    const parsed = Number.parseFloat(rawValue);
+    if (!Number.isFinite(parsed)) return;
+    seekTo(parsed);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1244,7 +1251,7 @@ export default function PlayerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        <div className="group relative" onClick={handleTimelineClick}>
+                        <div className="group relative">
                           <div className="h-2 overflow-hidden rounded-full bg-white/5">
                             <div
                               className="relative h-full rounded-full bg-[#e50914] transition-all"
@@ -1259,8 +1266,9 @@ export default function PlayerPage() {
                             max={effectiveDuration || 0}
                             step="0.1"
                             value={currentTime}
-                            onChange={handleSeek}
-                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                            onInput={(event) => handleSeek(event.currentTarget.value)}
+                            onChange={(event) => handleSeek(event.currentTarget.value)}
+                            className="absolute inset-x-0 -top-3 h-8 w-full cursor-pointer appearance-none bg-transparent touch-pan-x [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-[#e50914] [&::-webkit-slider-thumb]:bg-white"
                             aria-label="Seek audio timeline"
                           />
                           <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
