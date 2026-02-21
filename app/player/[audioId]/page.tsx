@@ -1018,11 +1018,13 @@ export default function PlayerPage() {
     }
 
     if (options?.commitFromPointer !== false) {
-      const finalTime = resolveTimelineTimeFromClientX(event.clientX, event.currentTarget);
-      if (finalTime !== undefined) {
-        seekTo(finalTime);
-      } else if (mobileTimelinePreviewTime !== null) {
+      if (mobileTimelinePreviewTime !== null) {
         seekTo(mobileTimelinePreviewTime);
+      } else {
+        const finalTime = resolveTimelineTimeFromClientX(event.clientX, event.currentTarget);
+        if (finalTime !== undefined) {
+          seekTo(finalTime);
+        }
       }
     }
 
@@ -1036,7 +1038,7 @@ export default function PlayerPage() {
   };
   const handleMobileTimelinePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
-    finishMobileTimelineScrub(event);
+    finishMobileTimelineScrub(event, { commitFromPointer: false });
   };
   const articleCoverImage = hasPersistentGeneratedImage(article?.generatedImageUrl)
     ? article?.generatedImageUrl || null
