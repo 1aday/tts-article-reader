@@ -16,6 +16,10 @@ type ArticleOgImageInput = {
   sourceHost?: string | null;
 };
 
+type HomeOgImageInput = {
+  coverImageUrls?: string[];
+};
+
 const escapeSvgText = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -287,7 +291,6 @@ const fetchRemoteImage = async (sourceImageUrl: string | null | undefined): Prom
       signal: controller.signal,
       redirect: "follow",
       headers: {
-        "User-Agent": "TTSReaderOGBot/1.0",
         Accept: "image/avif,image/webp,image/jpeg,image/png,image/*;q=0.8,*/*;q=0.2",
       },
     });
@@ -388,56 +391,173 @@ export async function buildArticleOgImage({
   return encodeCompliantJpeg(composed);
 }
 
-export async function buildHomeOgImage(): Promise<Buffer> {
+const HOME_CARD_WIDTH = 286;
+const HOME_CARD_HEIGHT = 382;
+const HOME_CARD_LAYOUT: Array<{ cx: number; cy: number; angle: number }> = [
+  { cx: 220, cy: 198, angle: -10 },
+  { cx: 452, cy: 176, angle: 5 },
+  { cx: 684, cy: 166, angle: -4 },
+  { cx: 918, cy: 184, angle: 7 },
+  { cx: 350, cy: 434, angle: -6 },
+  { cx: 610, cy: 446, angle: 4 },
+  { cx: 870, cy: 430, angle: -5 },
+];
+
+const HOME_LAYOUT_SELECTIONS: Record<number, number[]> = {
+  1: [2],
+  2: [1, 3],
+  3: [0, 2, 6],
+  4: [0, 2, 4, 6],
+  5: [0, 2, 3, 4, 6],
+  6: [0, 1, 2, 4, 5, 6],
+};
+
+const pickHomeCardLayout = (count: number): Array<{ cx: number; cy: number; angle: number }> => {
+  const capped = Math.max(1, Math.min(count, HOME_CARD_LAYOUT.length));
+  const selected = HOME_LAYOUT_SELECTIONS[capped];
+  if (selected) {
+    return selected.map((index) => HOME_CARD_LAYOUT[index]);
+  }
+  return HOME_CARD_LAYOUT.slice(0, capped);
+};
+
+const buildHomeBaseBackdrop = async (): Promise<Buffer> => {
   const svg = `
 <svg width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" viewBox="0 0 ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#111827"/>
-      <stop offset="48%" stop-color="#0f172a"/>
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="45%" stop-color="#0b1324"/>
       <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
-    <radialGradient id="glowA" cx="0.2" cy="0.12" r="0.44">
-      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.43"/>
+    <radialGradient id="glowA" cx="0.14" cy="0.12" r="0.5">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.36"/>
       <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowB" cx="0.82" cy="0.88" r="0.52">
-      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.48"/>
+    <radialGradient id="glowB" cx="0.86" cy="0.88" r="0.54">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4"/>
       <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="rgba(5,8,14,0.76)"/>
-      <stop offset="100%" stop-color="rgba(6,10,17,0.92)"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#fb923c"/>
-      <stop offset="100%" stop-color="#ef4444"/>
-    </linearGradient>
   </defs>
   <rect width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" fill="url(#bg)" />
   <rect width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" fill="url(#glowA)" />
   <rect width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" fill="url(#glowB)" />
-
-  <rect x="72" y="72" width="1056" height="486" rx="36" fill="url(#panel)" stroke="rgba(255,255,255,0.18)" />
-  <rect x="104" y="110" width="262" height="46" rx="23" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.24)" />
-  <circle cx="131" cy="133" r="9" fill="url(#accent)" />
-  <text x="151" y="141" fill="rgba(255,255,255,0.9)" font-size="20" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="700" letter-spacing="1.1">TTS READER</text>
-
-  <text x="104" y="238" fill="white" font-size="78" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="800">Turn Articles Into</text>
-  <text x="104" y="318" fill="white" font-size="78" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="800">Cinematic Audio</text>
-  <text x="104" y="380" fill="rgba(255,255,255,0.78)" font-size="34" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="500">AI voices, custom style, instant playback.</text>
-
-  <rect x="104" y="430" width="386" height="56" rx="14" fill="rgba(255,255,255,0.08)" />
-  <text x="132" y="468" fill="rgba(255,255,255,0.93)" font-size="27" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="650">Create. Generate. Listen.</text>
-
-  <rect x="852" y="176" width="198" height="276" rx="24" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.22)"/>
-  <rect x="808" y="212" width="198" height="276" rx="24" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.24)"/>
-  <rect x="764" y="248" width="198" height="276" rx="24" fill="url(#accent)" opacity="0.88"/>
 </svg>
 `;
 
-  const raster = await sharp(Buffer.from(svg))
+  return sharp(Buffer.from(svg))
     .resize(OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT)
+    .png()
+    .toBuffer();
+};
+
+const buildHomeFrameOverlay = (): Buffer => {
+  const svg = `
+<svg width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" viewBox="0 0 ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.30)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.12)"/>
+    </linearGradient>
+    <linearGradient id="shadeTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(3,6,12,0.36)"/>
+      <stop offset="100%" stop-color="rgba(3,6,12,0)"/>
+    </linearGradient>
+    <linearGradient id="shadeBottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(3,6,12,0)"/>
+      <stop offset="100%" stop-color="rgba(2,4,9,0.54)"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.08)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.04)"/>
+    </linearGradient>
+  </defs>
+  <rect x="54" y="54" width="1092" height="522" rx="36" fill="url(#panel)" stroke="url(#stroke)" stroke-width="2" />
+  <rect x="54" y="54" width="1092" height="180" rx="36" fill="url(#shadeTop)" />
+  <rect x="54" y="318" width="1092" height="258" rx="36" fill="url(#shadeBottom)" />
+</svg>
+`;
+
+  return Buffer.from(svg);
+};
+
+const buildHomeCoverCollage = async (coverImageUrls: string[]): Promise<Buffer | null> => {
+  if (coverImageUrls.length === 0) {
+    return null;
+  }
+
+  const fetched = await Promise.all(
+    coverImageUrls.slice(0, HOME_CARD_LAYOUT.length).map((url) => fetchRemoteImage(url))
+  );
+  const coverImages = fetched.filter((buffer): buffer is Buffer => Boolean(buffer));
+  const layouts = pickHomeCardLayout(coverImages.length);
+
+  if (coverImages.length < 2) {
+    return null;
+  }
+
+  const composites: Array<{ input: Buffer; top?: number; left?: number }> = [];
+
+  for (let index = 0; index < layouts.length; index++) {
+    const cover = coverImages[index];
+    const layout = layouts[index];
+
+    const card = await sharp(cover)
+      .rotate()
+      .resize(HOME_CARD_WIDTH, HOME_CARD_HEIGHT, {
+        fit: "cover",
+        position: "attention",
+      })
+      .modulate({ saturation: 1.32, brightness: 1.18 })
+      .composite([
+        {
+          input: Buffer.from(
+            `<svg width="${HOME_CARD_WIDTH}" height="${HOME_CARD_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1.5" y="1.5" width="${HOME_CARD_WIDTH - 3}" height="${HOME_CARD_HEIGHT - 3}" rx="18" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="3"/>
+            </svg>`
+          ),
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    const rotated = await sharp(card)
+      .rotate(layout.angle, {
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+    const rotatedMeta = await sharp(rotated).metadata();
+    const rotatedWidth = rotatedMeta.width ?? HOME_CARD_WIDTH;
+    const rotatedHeight = rotatedMeta.height ?? HOME_CARD_HEIGHT;
+
+    composites.push({
+      input: rotated,
+      left: Math.round(layout.cx - rotatedWidth / 2),
+      top: Math.round(layout.cy - rotatedHeight / 2),
+    });
+  }
+
+  if (composites.length === 0) {
+    return null;
+  }
+
+  const backdrop = await buildHomeBaseBackdrop();
+  return sharp(backdrop)
+    .composite(composites)
+    .png()
+    .toBuffer();
+};
+
+export async function buildHomeOgImage(input: HomeOgImageInput = {}): Promise<Buffer> {
+  const collage = await buildHomeCoverCollage(input.coverImageUrls ?? []);
+  if (collage) {
+    return encodeCompliantJpeg(collage);
+  }
+
+  const fallbackBackdrop = await buildHomeBaseBackdrop();
+  const raster = await sharp(fallbackBackdrop)
+    .composite([{ input: buildHomeFrameOverlay() }])
     .png()
     .toBuffer();
 
