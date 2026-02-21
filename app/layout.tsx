@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Navigation } from "@/components/navigation";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { PersistentPlayer } from "@/components/PersistentPlayer";
+import { buildRootMetadata } from "@/lib/seo/metadata";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -18,11 +19,7 @@ const bebasNeue = Bebas_Neue({
   weight: "400",
 });
 
-export const metadata: Metadata = {
-  title: "TTS Reader",
-  description:
-    "Convert any article into cinematic, natural-sounding audio with AI voice generation.",
-};
+export const metadata: Metadata = buildRootMetadata();
 
 export default function RootLayout({
   children,
