@@ -66,6 +66,27 @@ export function PersistentPlayer() {
     const clampedPercentage = Math.max(0, Math.min(1, percentage));
     seek(clampedPercentage * effectiveDuration);
   };
+  const seekFromProgressClientX = (clientX: number, element: HTMLDivElement) => {
+    if (!(effectiveDuration > 0)) return;
+    const rect = element.getBoundingClientRect();
+    if (!(rect.width > 0)) return;
+    const percentage = (clientX - rect.left) / rect.width;
+    handleProgressSeek(percentage);
+  };
+  const handleProgressPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+    seekFromProgressClientX(event.clientX, event.currentTarget);
+  };
+  const handleProgressPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && (event.buttons & 1) !== 1) return;
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+    seekFromProgressClientX(event.clientX, event.currentTarget);
+  };
 
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const cyclePlaybackRate = () => {
@@ -81,17 +102,16 @@ export function PersistentPlayer() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_100%_at_50%_120%,rgba(229,9,20,0.16),transparent_66%)]" />
 
         <div
-          className="relative h-0.5 cursor-pointer bg-white/8"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const percentage = (e.clientX - rect.left) / rect.width;
-            handleProgressSeek(percentage);
-          }}
+          className="relative h-6 cursor-pointer touch-none"
+          onPointerDown={handleProgressPointerDown}
+          onPointerMove={handleProgressPointerMove}
         >
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#e50914] to-[#b20710] transition-all"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/8">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#e50914] to-[#b20710] transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
           <input
             type="range"
             min="0"

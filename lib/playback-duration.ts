@@ -1,5 +1,7 @@
 const METADATA_MIN_TRUST_RATIO = 0.8;
 const METADATA_MAX_TRUST_RATIO = 1.25;
+const MAX_METADATA_EXTENSION_RATIO = 8;
+const MAX_REASONABLE_METADATA_DURATION_SECONDS = 24 * 60 * 60;
 
 const warnedDurationMismatches = new Set<string>();
 
@@ -38,7 +40,7 @@ function warnMetadataMismatchOnce(options: {
   warnedDurationMismatches.add(mismatchKey);
 
   console.warn(
-    `${logPrefix ?? "[Player]"} Metadata duration mismatch; keeping trusted duration.`,
+    `${logPrefix ?? "[Player]"} Metadata duration mismatch detected.`,
     {
       trackId: trackId ?? null,
       trustedDuration,
@@ -73,6 +75,15 @@ export function resolvePlaybackDurationSeconds(
           ratio,
           logPrefix: options.logPrefix,
         });
+      }
+
+      const metadataLooksLikeReasonableExtension =
+        metadataDuration > trustedDuration &&
+        ratio <= MAX_METADATA_EXTENSION_RATIO &&
+        metadataDuration <= MAX_REASONABLE_METADATA_DURATION_SECONDS;
+
+      if (!metadataLooksMismatched || metadataLooksLikeReasonableExtension) {
+        resolvedDuration = metadataDuration;
       }
     }
   } else if (metadataDuration > 0) {

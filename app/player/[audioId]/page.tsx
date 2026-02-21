@@ -46,8 +46,7 @@ const VOLUME_STORAGE_KEY = "tts-full-player-volume";
 const PLAYBACK_RATE_STORAGE_KEY = "tts-full-player-playback-rate";
 const LISTENING_PROGRESS_PREFIX = "tts-full-player-progress-";
 const GENERATED_COVER_MEDIA_SESSION_SIZE = "768x1024";
-const MOBILE_VISUALIZER_MEDIA_QUERY = "(max-width: 640px), (pointer: coarse)";
-const MOBILE_VISUALIZER_BAR_HEIGHTS = [30, 45, 62, 38, 72, 50, 66, 44, 74, 48, 60, 36];
+const MOBILE_SEEK_MARKERS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const getPlaybackUrl = (blobUrl?: string | null) => {
   if (!blobUrl) return null;
@@ -124,7 +123,8 @@ export default function PlayerPage() {
   const [showDeleteArticleDialog, setShowDeleteArticleDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [regeneratingImage, setRegeneratingImage] = useState(false);
-  const [useMobileVisualizerFallback, setUseMobileVisualizerFallback] = useState(false);
+  const [isMobileTimelineScrubbing, setIsMobileTimelineScrubbing] = useState(false);
+  const [mobileTimelinePreviewTime, setMobileTimelinePreviewTime] = useState<number | null>(null);
 
   const handleActionsCardToggle = () => {
     setShowActionsCard((prev) => {
@@ -137,21 +137,11 @@ export default function PlayerPage() {
   };
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const analyzerRef = useRef<AnalyserNode | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const visualizerConnectedRef = useRef(false);
-  const animationFrameRef = useRef<number | null>(null);
+  const activeMobileTimelinePointerIdRef = useRef<number | null>(null);
   const lastVolumeBeforeMuteRef = useRef(1);
   const lastSavedSecondRef = useRef(-1);
   const handoffTimeRef = useRef<number | null>(null);
   const handoffShouldAutoplayRef = useRef(false);
-  const isPlayingRef = useRef(false);
-
-  useEffect(() => {
-    isPlayingRef.current = playing;
-  }, [playing]);
 
   useEffect(() => {
     try {
@@ -195,30 +185,7 @@ export default function PlayerPage() {
   useEffect(() => {
     void loadAudio();
     return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (sourceNodeRef.current) {
-        try {
-          sourceNodeRef.current.disconnect();
-        } catch {
-          // Ignore disconnect issues on teardown.
-        }
-      }
-      if (analyzerRef.current) {
-        try {
-          analyzerRef.current.disconnect();
-        } catch {
-          // Ignore disconnect issues on teardown.
-        }
-      }
-      if (audioContextRef.current) {
-        void audioContextRef.current.close();
-      }
-      sourceNodeRef.current = null;
-      visualizerConnectedRef.current = false;
-      analyzerRef.current = null;
-      audioContextRef.current = null;
+      activeMobileTimelinePointerIdRef.current = null;
     };
   }, [audioId]);
   /* eslint-enable react-hooks/exhaustive-deps */
@@ -228,26 +195,6 @@ export default function PlayerPage() {
       audioRef.current.playbackRate = clamp(playbackRate, 0.5, 2);
     }
   }, [playbackRate]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_VISUALIZER_MEDIA_QUERY);
-    const updateFallback = () => setUseMobileVisualizerFallback(mediaQuery.matches);
-    updateFallback();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", updateFallback);
-      return () => mediaQuery.removeEventListener("change", updateFallback);
-    }
-
-    mediaQuery.addListener(updateFallback);
-    return () => mediaQuery.removeListener(updateFallback);
-  }, []);
-
-  useEffect(() => {
-    if (!useMobileVisualizerFallback || animationFrameRef.current === null) return;
-    cancelAnimationFrame(animationFrameRef.current);
-    animationFrameRef.current = null;
-  }, [useMobileVisualizerFallback]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -437,20 +384,6 @@ export default function PlayerPage() {
     }
   }, [currentTime, duration, playbackRate]);
 
-  /* eslint-disable react-hooks/exhaustive-deps */
-  useEffect(() => {
-    if (!playing) {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      return;
-    }
-    if (useMobileVisualizerFallback) return;
-    void setupVisualizer();
-  }, [playing, useMobileVisualizerFallback]);
-  /* eslint-enable react-hooks/exhaustive-deps */
-
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.volume = clamp(volume, 0, 1);
@@ -553,139 +486,11 @@ export default function PlayerPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [audioData?.duration, audioData?.id, audioId, duration, muted, playbackRate, volume]);
 
-  const setupVisualizer = async () => {
-    if (useMobileVisualizerFallback || !audioRef.current || !canvasRef.current) return;
-
-    const AudioContextConstructor =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-    if (!AudioContextConstructor) return;
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContextConstructor();
-      }
-
-      const audioContext = audioContextRef.current;
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
-
-      if (!analyzerRef.current) {
-        const analyzer = audioContext.createAnalyser();
-        analyzer.fftSize = window.matchMedia("(max-width: 640px)").matches ? 256 : 512;
-        analyzer.smoothingTimeConstant = 0.85;
-        analyzer.minDecibels = -95;
-        analyzer.maxDecibels = -10;
-        analyzerRef.current = analyzer;
-      }
-
-      if (!sourceNodeRef.current) {
-        sourceNodeRef.current = audioContext.createMediaElementSource(audioRef.current);
-      }
-
-      if (!visualizerConnectedRef.current) {
-        sourceNodeRef.current.connect(analyzerRef.current);
-        analyzerRef.current.connect(audioContext.destination);
-        visualizerConnectedRef.current = true;
-      }
-
-      drawVisualizer();
-    } catch (error) {
-      console.error("Visualizer setup error:", error);
-    }
-  };
-
-  const drawVisualizer = () => {
-    if (!analyzerRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const analyzer = analyzerRef.current;
-    const bufferLength = analyzer.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    const waveformArray = new Uint8Array(bufferLength);
-    let lastFrameTime = 0;
-    const frameIntervalMs = 1000 / 30;
-
-    const draw = (timestamp: number) => {
-      if (!isPlayingRef.current || !audioRef.current || audioRef.current.paused) {
-        animationFrameRef.current = null;
-        return;
-      }
-      animationFrameRef.current = requestAnimationFrame(draw);
-      if (timestamp - lastFrameTime < frameIntervalMs) return;
-      lastFrameTime = timestamp;
-
-      const nextWidth = canvas.clientWidth || 1;
-      const nextHeight = canvas.clientHeight || 1;
-      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
-        canvas.width = nextWidth;
-        canvas.height = nextHeight;
-      }
-
-      analyzer.getByteFrequencyData(dataArray);
-      analyzer.getByteTimeDomainData(waveformArray);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, "rgba(255, 92, 104, 0.04)");
-      gradient.addColorStop(0.5, "rgba(229, 9, 20, 0.06)");
-      gradient.addColorStop(1, "rgba(12, 15, 25, 0.35)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const mirroredBarCount = window.matchMedia("(max-width: 640px)").matches ? 40 : 64;
-      const sampleStep = Math.max(1, Math.floor(bufferLength / mirroredBarCount));
-      const barGap = canvas.width / mirroredBarCount;
-      const halfHeight = canvas.height / 2;
-
-      for (let i = 0; i < mirroredBarCount; i++) {
-        const value = dataArray[i * sampleStep] / 255;
-        const barHeight = Math.max(2, value * (canvas.height * 0.38));
-        const barWidth = Math.max(2, barGap - 2);
-        const x = i * barGap + 1;
-
-        const hueShift = 356 - (i / mirroredBarCount) * 20;
-        ctx.fillStyle = `hsla(${hueShift}, 100%, 60%, 0.86)`;
-        ctx.fillRect(x, halfHeight - barHeight - 1, barWidth, barHeight);
-        ctx.fillRect(x, halfHeight + 1, barWidth, barHeight);
-      }
-
-      ctx.beginPath();
-      const sliceWidth = canvas.width / bufferLength;
-      let waveX = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const normalized = waveformArray[i] / 128 - 1;
-        const y = halfHeight + normalized * (canvas.height * 0.14);
-        if (i === 0) {
-          ctx.moveTo(waveX, y);
-        } else {
-          ctx.lineTo(waveX, y);
-        }
-        waveX += sliceWidth;
-      }
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-
-      const averageLevel = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
-      const normalizedAverage = averageLevel / 255;
-      ctx.fillStyle = `rgba(229, 9, 20, ${0.12 + normalizedAverage * 0.22})`;
-      ctx.fillRect(0, halfHeight - 2, canvas.width, 4);
-    };
-
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    animationFrameRef.current = requestAnimationFrame(draw);
-  };
-
   const loadAudio = async () => {
     setLoading(true);
+    setIsMobileTimelineScrubbing(false);
+    setMobileTimelinePreviewTime(null);
+    activeMobileTimelinePointerIdRef.current = null;
     try {
       if (!Number.isFinite(audioId)) {
         toast.error("Invalid audio ID");
@@ -753,9 +558,6 @@ export default function PlayerPage() {
     if (audioRef.current.paused) {
       setIsBuffering(true);
       try {
-        if (!useMobileVisualizerFallback) {
-          await setupVisualizer();
-        }
         await audioRef.current.play();
       } catch (error) {
         console.error("Play error:", error);
@@ -866,7 +668,7 @@ export default function PlayerPage() {
     return formatDuration(time);
   };
 
-  const seekTo = (time: number) => {
+  const seekTo = (time: number, options?: { persistProgress?: boolean }) => {
     if (!audioRef.current) return;
     const safeDuration = resolvePlaybackDurationSeconds({
       trustedDuration: audioData?.duration || 0,
@@ -880,7 +682,9 @@ export default function PlayerPage() {
     audioRef.current.currentTime = nextTime;
     setCurrentTime(nextTime);
     lastSavedSecondRef.current = Math.floor(nextTime);
-    persistListeningProgress(audioId, nextTime);
+    if (options?.persistProgress !== false) {
+      persistListeningProgress(audioId, nextTime);
+    }
   };
 
   const handleSeek = (rawValue: string) => {
@@ -1119,6 +923,91 @@ export default function PlayerPage() {
   const effectiveDuration = duration > 0 ? duration : currentTime;
   const progressPercentage = effectiveDuration > 0 ? clamp((currentTime / effectiveDuration) * 100, 0, 100) : 0;
   const remainingTime = Math.max(0, effectiveDuration - currentTime);
+  const mobileTimelineTime =
+    isMobileTimelineScrubbing && mobileTimelinePreviewTime !== null
+      ? mobileTimelinePreviewTime
+      : currentTime;
+  const mobileTimelineProgressPercentage =
+    effectiveDuration > 0
+      ? clamp((mobileTimelineTime / effectiveDuration) * 100, 0, 100)
+      : 0;
+  const resolveTimelineTimeFromClientX = (clientX: number, element: HTMLDivElement) => {
+    if (!(effectiveDuration > 0)) return;
+    const rect = element.getBoundingClientRect();
+    if (!(rect.width > 0)) return;
+    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+    return ratio * effectiveDuration;
+  };
+  const seekTimelineFromClientX = (
+    clientX: number,
+    element: HTMLDivElement,
+    options?: { persistProgress?: boolean },
+  ) => {
+    const nextTime = resolveTimelineTimeFromClientX(clientX, element);
+    if (nextTime === undefined) return;
+    if (options?.persistProgress === false) {
+      setMobileTimelinePreviewTime(nextTime);
+    }
+    seekTo(nextTime, { persistProgress: options?.persistProgress });
+  };
+  const handleTimelinePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: true });
+  };
+  const handleTimelinePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && (event.buttons & 1) !== 1) return;
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: true });
+  };
+  const handleMobileTimelinePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    activeMobileTimelinePointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsMobileTimelineScrubbing(true);
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: false });
+  };
+  const handleMobileTimelinePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activeMobileTimelinePointerIdRef.current !== event.pointerId) return;
+    event.preventDefault();
+    seekTimelineFromClientX(event.clientX, event.currentTarget, { persistProgress: false });
+  };
+  const finishMobileTimelineScrub = (
+    event: React.PointerEvent<HTMLDivElement>,
+    options?: { commitFromPointer?: boolean },
+  ) => {
+    if (activeMobileTimelinePointerIdRef.current !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (options?.commitFromPointer !== false) {
+      const finalTime = resolveTimelineTimeFromClientX(event.clientX, event.currentTarget);
+      if (finalTime !== undefined) {
+        seekTo(finalTime);
+      } else if (mobileTimelinePreviewTime !== null) {
+        seekTo(mobileTimelinePreviewTime);
+      }
+    }
+
+    activeMobileTimelinePointerIdRef.current = null;
+    setIsMobileTimelineScrubbing(false);
+    setMobileTimelinePreviewTime(null);
+  };
+  const handleMobileTimelinePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    finishMobileTimelineScrub(event);
+  };
+  const handleMobileTimelinePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    finishMobileTimelineScrub(event);
+  };
   const articleCoverImage = hasPersistentGeneratedImage(article?.generatedImageUrl)
     ? article?.generatedImageUrl || null
     : article?.imageUrl || null;
@@ -1237,44 +1126,17 @@ export default function PlayerPage() {
                   </div>
 
                   <div className="space-y-4 rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_75%_35%,rgba(229,9,20,0.14),transparent_52%),linear-gradient(160deg,rgba(10,12,18,0.68),rgba(8,10,16,0.44))] px-4 py-4 shadow-[0_24px_56px_rgba(0,0,0,0.34)] sm:px-5 sm:py-5">
-                    <div className="relative h-24 overflow-hidden rounded-2xl sm:h-28">
-                      <div
-                        className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(229,9,20,0.22),transparent_62%)] transition-opacity duration-300 ${
-                          playing ? "opacity-100" : "opacity-65"
-                        }`}
-                      />
-                      {useMobileVisualizerFallback ? (
-                        <div className="mobile-visualizer-fallback absolute inset-0" aria-hidden="true">
-                          {MOBILE_VISUALIZER_BAR_HEIGHTS.map((height, index) => (
-                            <span
-                              key={`${height}-${index}`}
-                              className={`mobile-visualizer-bar ${playing ? "is-active" : ""}`}
-                              style={{
-                                height: `${height}%`,
-                                animationDelay: `${index * 70}ms`,
-                              }}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <canvas
-                          ref={canvasRef}
-                          width={800}
-                          height={200}
-                          className="absolute inset-0 h-full w-full"
-                        />
-                      )}
-                      {!playing && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/45">
-                            {isBuffering
-                              ? "Buffering audio..."
-                              : useMobileVisualizerFallback
-                                ? "Mobile visualizer simplified for smooth playback"
-                                : "Visualizer appears while playing"}
-                          </div>
-                        </div>
-                      )}
+                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(130deg,rgba(15,18,26,0.94),rgba(25,11,17,0.76))] px-4 py-3">
+                      <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,72,92,0.24),transparent_60%),radial-gradient(circle_at_80%_15%,rgba(80,132,255,0.2),transparent_48%)] transition-opacity duration-500 ${playing ? "opacity-100" : "opacity-65"}`} />
+                      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#e50914]/70 to-transparent" />
+                      <div className="relative flex items-center justify-between gap-3 text-[11px] sm:text-xs">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 font-medium text-white/75">
+                          <span className={`h-1.5 w-1.5 rounded-full ${isBuffering ? "bg-amber-400 animate-pulse" : playing ? "bg-[#ff4c54] animate-pulse" : "bg-white/60"}`} />
+                          {isBuffering ? "Syncing stream" : playing ? "Live playback" : "Ready to scrub"}
+                        </span>
+                        <span className="font-mono text-white/65">{formatTime(effectiveDuration)} total</span>
+                      </div>
                     </div>
 
                     <div className="space-y-4 sm:space-y-5">
@@ -1316,36 +1178,105 @@ export default function PlayerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        <div className="group relative">
-                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                            <div
-                              className="relative h-full rounded-full bg-[#e50914] transition-all"
-                              style={{ width: `${progressPercentage}%` }}
-                            >
-                              <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                        <div className={`seek-lab relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(10,12,18,0.9),rgba(19,10,16,0.78))] px-3.5 py-3.5 sm:hidden ${playing ? "is-playing" : ""} ${isMobileTimelineScrubbing ? "is-scrubbing" : ""}`}>
+                          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_30%,rgba(255,76,108,0.32),transparent_55%),radial-gradient(circle_at_88%_78%,rgba(58,118,255,0.2),transparent_52%)]" />
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+                          <div
+                            className="seek-lab-track relative touch-none"
+                            onPointerDown={handleMobileTimelinePointerDown}
+                            onPointerMove={handleMobileTimelinePointerMove}
+                            onPointerUp={handleMobileTimelinePointerUp}
+                            onPointerCancel={handleMobileTimelinePointerCancel}
+                          >
+                            <div className="seek-lab-track-base" />
+                            <div className="seek-lab-track-fill" style={{ width: `${mobileTimelineProgressPercentage}%` }}>
+                              <div className="seek-lab-track-shimmer" />
+                            </div>
+                            <div className="seek-lab-markers" aria-hidden="true">
+                              {MOBILE_SEEK_MARKERS.map((ratio, index) => (
+                                <span
+                                  key={`seek-marker-${index}`}
+                                  className="seek-lab-marker"
+                                  style={{ left: `${ratio * 100}%` }}
+                                />
+                              ))}
+                            </div>
+                            <div className="seek-lab-thumb" style={{ left: `${mobileTimelineProgressPercentage}%` }}>
+                              <span className="seek-lab-thumb-core" />
+                            </div>
+                            <div className={`seek-lab-bubble ${isMobileTimelineScrubbing ? "is-visible" : ""}`} style={{ left: `${mobileTimelineProgressPercentage}%` }}>
+                              {formatTime(mobileTimelineTime)}
                             </div>
                           </div>
+
                           <input
                             type="range"
                             min="0"
                             max={effectiveDuration || 0}
                             step="0.1"
                             value={currentTime}
-                            onInput={(event) => handleSeek(event.currentTarget.value)}
-                            className="absolute inset-x-0 -top-3 h-8 w-full cursor-pointer appearance-none bg-transparent touch-pan-x [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-[#e50914] [&::-webkit-slider-thumb]:bg-white"
+                            onInput={(event) => {
+                              const next = Number.parseFloat(event.currentTarget.value);
+                              if (!Number.isFinite(next)) return;
+                              setIsMobileTimelineScrubbing(true);
+                              setMobileTimelinePreviewTime(next);
+                              seekTo(next, { persistProgress: false });
+                            }}
+                            onChange={(event) => {
+                              handleSeek(event.currentTarget.value);
+                              setIsMobileTimelineScrubbing(false);
+                              setMobileTimelinePreviewTime(null);
+                            }}
+                            className="sr-only"
                             aria-label="Seek audio timeline"
                           />
-                          <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-                            <div className="whitespace-nowrap rounded-lg border border-[#e50914]/30 bg-black/90 px-3 py-1 text-xs text-white">
-                              {formatTime(currentTime)}
-                            </div>
+
+                          <div className="relative mt-3 flex items-center justify-between font-mono text-[11px] text-white/70">
+                            <span>{formatTime(currentTime)}</span>
+                            <span className="rounded-full border border-white/15 bg-black/35 px-2 py-0.5 text-[10px] text-white/65">
+                              {isBuffering ? "Buffering..." : isMobileTimelineScrubbing ? "Release to seek" : "Drag anywhere"}
+                            </span>
+                            <span>-{formatTime(remainingTime)}</span>
                           </div>
                         </div>
 
-                        <div className="flex justify-between font-mono text-xs text-white/60 sm:text-sm">
-                          <span>{formatTime(currentTime)}</span>
-                          <span>-{formatTime(remainingTime)}</span>
-                          <span>{formatTime(effectiveDuration)}</span>
+                        <div className="hidden space-y-3 sm:block">
+                          <div
+                            className="group relative touch-none"
+                            onPointerDown={handleTimelinePointerDown}
+                            onPointerMove={handleTimelinePointerMove}
+                          >
+                            <div className="h-3 overflow-hidden rounded-full bg-white/5 sm:h-2">
+                              <div
+                                className="relative h-full rounded-full bg-[#e50914] transition-all"
+                                style={{ width: `${progressPercentage}%` }}
+                              >
+                                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max={effectiveDuration || 0}
+                              step="0.1"
+                              value={currentTime}
+                              onInput={(event) => handleSeek(event.currentTarget.value)}
+                              className="absolute inset-x-0 -top-5 h-12 w-full cursor-pointer appearance-none bg-transparent touch-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-0.5 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-[#e50914] [&::-webkit-slider-thumb]:bg-white sm:[&::-webkit-slider-runnable-track]:h-2 sm:[&::-webkit-slider-thumb]:-mt-1"
+                              aria-label="Seek audio timeline"
+                            />
+                            <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                              <div className="whitespace-nowrap rounded-lg border border-[#e50914]/30 bg-black/90 px-3 py-1 text-xs text-white">
+                                {formatTime(currentTime)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between font-mono text-xs text-white/60 sm:text-sm">
+                            <span>{formatTime(currentTime)}</span>
+                            <span>-{formatTime(remainingTime)}</span>
+                            <span>{formatTime(effectiveDuration)}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1463,12 +1394,7 @@ export default function PlayerPage() {
             onLoadedMetadata={handleLoadedMetadata}
             onDurationChange={handleDurationChange}
             onEnded={handleEnded}
-            onPlay={() => {
-              setPlaying(true);
-              if (!useMobileVisualizerFallback) {
-                void setupVisualizer();
-              }
-            }}
+            onPlay={() => setPlaying(true)}
             onPause={() => {
               setPlaying(false);
               if (audioRef.current && Number.isFinite(audioRef.current.currentTime)) {
@@ -1871,35 +1797,143 @@ export default function PlayerPage() {
         .animate-orbit-reverse {
           animation: orbitReverse 13s linear infinite;
         }
-        @keyframes mobileVisualizerBarPulse {
+        @keyframes seekLabShimmer {
+          0% {
+            transform: translateX(-120%);
+          }
+          100% {
+            transform: translateX(120%);
+          }
+        }
+        @keyframes seekLabPulse {
           0%, 100% {
-            transform: scaleY(0.45);
-            opacity: 0.4;
+            box-shadow:
+              0 0 0 0 rgba(255, 94, 125, 0.26),
+              0 6px 18px rgba(0, 0, 0, 0.48);
           }
           50% {
-            transform: scaleY(1);
-            opacity: 0.95;
+            box-shadow:
+              0 0 0 8px rgba(255, 94, 125, 0),
+              0 8px 22px rgba(0, 0, 0, 0.55);
           }
         }
-        .mobile-visualizer-fallback {
-          display: flex;
-          align-items: flex-end;
-          gap: 4px;
-          padding: 14px 12px;
-        }
-        .mobile-visualizer-bar {
-          flex: 1 1 0;
+        .seek-lab-track {
+          position: relative;
+          height: 44px;
           border-radius: 999px;
-          min-height: 20%;
-          background: linear-gradient(180deg, rgba(255, 126, 143, 0.95), rgba(229, 9, 20, 0.25));
-          box-shadow: 0 0 12px rgba(229, 9, 20, 0.3);
-          transform-origin: center bottom;
-          animation: mobileVisualizerBarPulse 1.2s ease-in-out infinite;
-          animation-play-state: paused;
+        }
+        .seek-lab-track-base {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 50%;
+          height: 12px;
+          transform: translateY(-50%);
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            inset 0 1px 2px rgba(0, 0, 0, 0.45);
+        }
+        .seek-lab-track-fill {
+          position: absolute;
+          left: 0;
+          top: 50%;
+          height: 12px;
+          min-width: 12px;
+          transform: translateY(-50%);
+          border-radius: 999px;
+          background: linear-gradient(90deg, #ff6f8b 0%, #ff3c59 45%, #ff1f3f 100%);
+          box-shadow:
+            0 0 18px rgba(255, 63, 90, 0.42),
+            inset 0 1px 0 rgba(255, 255, 255, 0.32);
+          overflow: hidden;
+          transition: width 120ms linear;
+        }
+        .seek-lab-track-shimmer {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.46), transparent);
+          animation: seekLabShimmer 1.8s linear infinite;
+          mix-blend-mode: screen;
+          opacity: 0.88;
+        }
+        .seek-lab-markers {
+          pointer-events: none;
+          position: absolute;
+          inset: 0;
+        }
+        .seek-lab-marker {
+          position: absolute;
+          top: 50%;
+          width: 2px;
+          height: 8px;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+          background: rgba(255, 255, 255, 0.45);
           opacity: 0.55;
         }
-        .mobile-visualizer-bar.is-active {
-          animation-play-state: running;
+        .seek-lab-thumb {
+          position: absolute;
+          top: 50%;
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          background: linear-gradient(145deg, rgba(16, 18, 27, 0.95), rgba(30, 10, 17, 0.94));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.48);
+          transition: transform 150ms ease, box-shadow 180ms ease;
+        }
+        .seek-lab-thumb-core {
+          width: 11px;
+          height: 11px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 35% 30%, #ffffff, #ffd2da);
+          box-shadow:
+            0 0 0 3px rgba(255, 76, 108, 0.2),
+            0 0 12px rgba(255, 76, 108, 0.4);
+        }
+        .seek-lab-bubble {
+          position: absolute;
+          top: 2px;
+          transform: translate(-50%, -106%);
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: rgba(9, 11, 18, 0.92);
+          color: rgba(255, 255, 255, 0.88);
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+          font-size: 11px;
+          line-height: 1;
+          letter-spacing: 0.02em;
+          padding: 6px 10px;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 160ms ease, transform 160ms ease;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
+        }
+        .seek-lab-bubble.is-visible {
+          opacity: 1;
+          transform: translate(-50%, -114%);
+        }
+        .seek-lab.is-playing .seek-lab-thumb {
+          animation: seekLabPulse 1.8s ease-in-out infinite;
+        }
+        .seek-lab.is-scrubbing .seek-lab-thumb {
+          transform: translate(-50%, -50%) scale(1.08);
+        }
+        .seek-lab.is-scrubbing .seek-lab-track-fill {
+          transition: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .seek-lab-track-shimmer,
+          .seek-lab.is-playing .seek-lab-thumb {
+            animation: none;
+          }
         }
       `}</style>
     </div>
