@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Loader2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, Waves, X, Music2 } from "lucide-react";
 import { formatDuration } from "@/lib/audio-duration";
 
 export function PersistentPlayer() {
   const pathname = usePathname();
+  const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const volumeControlRef = useRef<HTMLDivElement | null>(null);
   const {
     currentTrack,
     isStickyPlayerVisible,
@@ -29,6 +32,31 @@ export function PersistentPlayer() {
   } = usePlayer();
 
   const isPlayerPage = pathname?.startsWith("/player/") ?? false;
+
+  useEffect(() => {
+    if (!showVolumeControl) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const targetNode = event.target as Node | null;
+      if (!targetNode) return;
+      if (volumeControlRef.current?.contains(targetNode)) return;
+      setShowVolumeControl(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowVolumeControl(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [showVolumeControl]);
 
   if (isPlayerPage) return null;
   if (!currentTrack) return null;
@@ -207,24 +235,46 @@ export function PersistentPlayer() {
               {playbackRate}x
             </button>
 
-            <div className="inline-flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] pl-1.5 pr-2">
+            <div ref={volumeControlRef} className="relative">
               <button
-                onClick={toggleMute}
-                className="inline-flex h-5 w-5 items-center justify-center text-white/55 transition hover:text-white"
-                aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                onClick={() => setShowVolumeControl((prev) => !prev)}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-white/70 transition ${
+                  showVolumeControl
+                    ? "border-[#e50914]/45 bg-[#e50914]/18 text-white"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/22 hover:text-white"
+                }`}
+                aria-label="Volume controls"
+                aria-expanded={showVolumeControl}
               >
                 {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
               </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={currentVolume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="h-1 w-12 cursor-pointer appearance-none rounded-full bg-white/15 sm:w-14 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/90 [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(255,255,255,0.08)]"
-                aria-label="Volume"
-              />
+
+              {showVolumeControl && (
+                <div className="absolute bottom-full right-0 z-20 mb-2 w-44 rounded-xl border border-white/15 bg-[linear-gradient(145deg,rgba(10,12,18,0.95),rgba(24,11,17,0.88))] p-2.5 shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={toggleMute}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/75 transition hover:text-white"
+                      aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                    >
+                      {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={currentVolume}
+                      onChange={(e) => setVolume(parseFloat(e.target.value))}
+                      className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/15 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white/90 [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(255,255,255,0.08)]"
+                      aria-label="Volume"
+                    />
+                    <span className="w-8 text-right font-mono text-[10px] text-white/60">
+                      {Math.round(currentVolume * 100)}%
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

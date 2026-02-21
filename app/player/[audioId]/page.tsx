@@ -103,6 +103,7 @@ export default function PlayerPage() {
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showActionsCard, setShowActionsCard] = useState(false);
 
@@ -138,6 +139,7 @@ export default function PlayerPage() {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const activeMobileTimelinePointerIdRef = useRef<number | null>(null);
+  const volumeControlRef = useRef<HTMLDivElement | null>(null);
   const lastVolumeBeforeMuteRef = useRef(1);
   const lastSavedSecondRef = useRef(-1);
   const handoffTimeRef = useRef<number | null>(null);
@@ -215,6 +217,31 @@ export default function PlayerPage() {
       // Ignore unsupported audio session behavior.
     }
   }, []);
+
+  useEffect(() => {
+    if (!showVolumeControl) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const targetNode = event.target as Node | null;
+      if (!targetNode) return;
+      if (volumeControlRef.current?.contains(targetNode)) return;
+      setShowVolumeControl(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowVolumeControl(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [showVolumeControl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -488,6 +515,7 @@ export default function PlayerPage() {
 
   const loadAudio = async () => {
     setLoading(true);
+    setShowVolumeControl(false);
     setIsMobileTimelineScrubbing(false);
     setMobileTimelinePreviewTime(null);
     activeMobileTimelinePointerIdRef.current = null;
@@ -1281,38 +1309,61 @@ export default function PlayerPage() {
                       </div>
 
                       <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 sm:gap-3">
-                        <button
-                          onClick={toggleMute}
-                          className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-[#e50914]/30 hover:bg-white/10"
-                          aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-                        >
-                          {muted || volume === 0 ? (
-                            <VolumeX className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
-                          ) : (
-                            <Volume2 className="h-4 w-4 text-white/70 transition-colors group-hover:text-[#e50914]" />
+                        <div ref={volumeControlRef} className="relative">
+                          <button
+                            onClick={() => setShowVolumeControl((prev) => !prev)}
+                            className={`group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all ${
+                              showVolumeControl
+                                ? "border-[#e50914]/45 bg-[#e50914]/15"
+                                : "border-white/10 bg-white/5 hover:border-[#e50914]/30 hover:bg-white/10"
+                            }`}
+                            aria-label="Volume controls"
+                            aria-expanded={showVolumeControl}
+                          >
+                            {muted || volume === 0 ? (
+                              <VolumeX className="h-4 w-4 text-white/80 transition-colors group-hover:text-[#ff6f7a]" />
+                            ) : (
+                              <Volume2 className="h-4 w-4 text-white/80 transition-colors group-hover:text-[#ff6f7a]" />
+                            )}
+                          </button>
+
+                          {showVolumeControl && (
+                            <div className="absolute bottom-full left-0 z-20 mb-2 w-52 rounded-xl border border-white/15 bg-[linear-gradient(145deg,rgba(10,12,18,0.95),rgba(24,11,17,0.88))] p-3 shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={toggleMute}
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:text-[#ff6f7a]"
+                                  aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                                >
+                                  {muted || volume === 0 ? (
+                                    <VolumeX className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Volume2 className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                                <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
+                                  <div
+                                    className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
+                                    style={{ width: `${muted ? 0 : volume * 100}%` }}
+                                  />
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value={muted ? 0 : volume}
+                                    onChange={handleVolumeChange}
+                                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                    aria-label="Volume"
+                                  />
+                                </div>
+                                <span className="w-9 text-right font-mono text-[10px] text-white/65">
+                                  {Math.round((muted ? 0 : volume) * 100)}%
+                                </span>
+                              </div>
+                            </div>
                           )}
-                        </button>
-
-                        <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full bg-[#e50914]"
-                            style={{ width: `${muted ? 0 : volume * 100}%` }}
-                          />
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={muted ? 0 : volume}
-                            onChange={handleVolumeChange}
-                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                            aria-label="Volume"
-                          />
                         </div>
-
-                        <span className="w-8 shrink-0 text-right font-mono text-[10px] text-white/55 sm:w-10 sm:text-[11px]">
-                          {Math.round((muted ? 0 : volume) * 100)}%
-                        </span>
 
                         <select
                           value={playbackRate}
