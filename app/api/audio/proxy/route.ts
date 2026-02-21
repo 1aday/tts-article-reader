@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { access, mkdir, readFile, rename, rm } from "node:fs/promises";
 import { constants } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,7 +11,7 @@ interface ParsedRange {
   end: number;
 }
 
-const REMUX_CACHE_DIR = join(process.cwd(), "storage", "proxy-remux-cache");
+const REMUX_CACHE_DIR = join(tmpdir(), "tts-audio-proxy-remux-cache");
 const remuxInFlight = new Map<string, Promise<string | null>>();
 
 function parseRange(rangeHeader: string, fileSize: number): ParsedRange | null {
@@ -99,10 +100,10 @@ async function ensureRemuxedCacheFile(upstreamUrl: string): Promise<string | nul
   }
 
   const task = (async () => {
-    await mkdir(REMUX_CACHE_DIR, { recursive: true });
     const tempPath = join(REMUX_CACHE_DIR, `${cacheKey}-${randomUUID()}.tmp.mp3`);
-
     try {
+      await mkdir(REMUX_CACHE_DIR, { recursive: true });
+
       await runFfmpeg([
         "-hide_banner",
         "-loglevel",
