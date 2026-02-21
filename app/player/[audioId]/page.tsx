@@ -873,29 +873,14 @@ export default function PlayerPage() {
   };
 
   const handleDownload = async () => {
-    const originalAudioUrl = audioData?.blobUrl;
-    if (!originalAudioUrl) return;
-
     try {
-      const downloadableUrl = getPlaybackUrl(originalAudioUrl);
-      if (!downloadableUrl) {
-        throw new Error("Audio URL unavailable");
-      }
-
-      const response = await fetch(downloadableUrl);
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = `/api/audio/${audioId}/download`;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `audio-${audioId}.mp3`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("Audio downloaded successfully!");
+      toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download audio");

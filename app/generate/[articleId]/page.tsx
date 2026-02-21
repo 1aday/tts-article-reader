@@ -519,26 +519,19 @@ export default function GeneratePage() {
   };
 
   const handleDownload = async () => {
-    if (!blobUrl) return;
-
     try {
-      // Fetch the audio file
-      const response = await fetch(blobUrl);
-      const blob = await response.blob();
+      if (!audioFileId) {
+        throw new Error("Audio file is not ready for download");
+      }
 
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
+      const url = `/api/audio/${audioFileId}/download`;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `article-${articleId}-audio.mp3`;
       document.body.appendChild(a);
       a.click();
-
-      // Cleanup
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success("Audio downloaded successfully!");
+      toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download audio");

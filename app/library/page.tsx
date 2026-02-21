@@ -83,22 +83,15 @@ export default function LibraryPage() {
     }
   };
 
-  const handleDownload = async (blobUrl: string, articleId: number, voiceName: string) => {
+  const handleDownload = async (audioId: number) => {
     try {
-      const response = await fetch(blobUrl);
-      const blob = await response.blob();
-
-      const url = window.URL.createObjectURL(blob);
+      const url = `/api/audio/${audioId}/download`;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `article-${articleId}-${voiceName}.mp3`;
       document.body.appendChild(a);
       a.click();
-
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      toast.success("Audio downloaded!");
+      toast.success("Full audio download started.");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download audio");
@@ -632,7 +625,7 @@ export default function LibraryPage() {
                             Play
                           </Button>
                           <Button
-                            onClick={() => handleDownload(article.audioFiles[0].blobUrl, article.id, article.audioFiles[0].voiceName)}
+                            onClick={() => handleDownload(article.audioFiles[0].id)}
                             size="sm"
                             variant="outline"
                             className="flex-1 border-white/20 text-white/80 hover:bg-white/8 hover:text-white"
