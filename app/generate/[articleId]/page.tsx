@@ -15,13 +15,17 @@ import {
   AudioWaveform,
   Upload,
   Clock3,
+  Trash2,
 } from "lucide-react";
 import { TimeMetricsCards } from "@/components/generation/TimeMetricsCards";
 import { StageDetailsCard } from "@/components/generation/StageDetailsCard";
 import { AudioSizeSparkline } from "@/components/generation/AudioSizeSparkline";
 import { DetailedStatsTable } from "@/components/generation/DetailedStatsTable";
-import { DEFAULT_VOICE_AUDIO_SETTINGS, parseAudioSettingParam } from "@/lib/audio-settings";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { DEFAULT_VOICE_AUDIO_SETTINGS, parseV3StabilityParam } from "@/lib/audio-settings";
 import { downloadAudioFile } from "@/lib/download-audio";
+import { hasPersistentGeneratedImage } from "@/lib/utils/image-url";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 const ACTIVE_JOB_STATUSES = new Set(["pending", "enhancing", "generating", "uploading"]);
 type GenerationStage = "enhance" | "generate" | "upload" | "complete";
@@ -67,6 +71,7 @@ export default function GeneratePage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { play } = usePlayer();
 
   const articleId = parseInt(params.articleId as string);
   const voiceId = searchParams.get("voiceId");
@@ -92,6 +97,8 @@ export default function GeneratePage() {
   const [wordCount, setWordCount] = useState(0);
   const [chunkSize, setChunkSize] = useState<string>("");
   const [canCloseInfo, setCanCloseInfo] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingArticle, setDeletingArticle] = useState(false);
 
   // Time tracking & metrics
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -296,21 +303,13 @@ export default function GeneratePage() {
       console.log(`[Generate UI] Starting generation for article ${articleId}`);
 
       // Parse audio settings from URL params
-      const stability = parseAudioSettingParam(
+      const stability = parseV3StabilityParam(
         searchParams.get("stability"),
         DEFAULT_VOICE_AUDIO_SETTINGS.stability
       );
-      const similarityBoost = parseAudioSettingParam(
-        searchParams.get("similarityBoost"),
-        DEFAULT_VOICE_AUDIO_SETTINGS.similarityBoost
-      );
-      const style = parseAudioSettingParam(
-        searchParams.get("style"),
-        DEFAULT_VOICE_AUDIO_SETTINGS.style
-      );
       const useSpeakerBoost = searchParams.get("useSpeakerBoost") !== "false";
 
-      console.log(`[Generate UI] Audio settings:`, { stability, similarityBoost, style, useSpeakerBoost, skipEnhancement });
+      console.log(`[Generate UI] Audio settings:`, { stability, useSpeakerBoost, skipEnhancement });
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -323,8 +322,6 @@ export default function GeneratePage() {
           voiceName: voiceName || undefined,
           skipEnhancement,
           stability,
-          similarityBoost,
-          style,
           useSpeakerBoost,
         }),
       });
@@ -503,10 +500,36 @@ export default function GeneratePage() {
     }
   };
 
-  const handlePlayAudio = () => {
-    if (audioFileId) {
-      router.push(`/player/${audioFileId}`);
+  const handlePlayAudio = async () => {
+    if (!audioFileId || !blobUrl) return;
+
+    let articleTitle = `Article ${articleId}`;
+    let articleImageUrl: string | null = null;
+
+    try {
+      const articleResponse = await fetch(`/api/article/${articleId}`);
+      if (articleResponse.ok) {
+        const article = await articleResponse.json();
+        if (typeof article?.title === "string" && article.title.trim().length > 0) {
+          articleTitle = article.title.trim();
+        }
+        articleImageUrl = hasPersistentGeneratedImage(article?.generatedImageUrl)
+          ? article.generatedImageUrl
+          : article?.imageUrl ?? null;
+      }
+    } catch (error) {
+      console.error("Failed to fetch article metadata for playback:", error);
     }
+
+    play({
+      id: audioFileId,
+      articleId,
+      articleTitle,
+      articleImageUrl,
+      voiceName: voiceName || "Voice narration",
+      blobUrl,
+      duration: 0,
+    });
   };
 
   const handleRetry = () => {
@@ -530,6 +553,32 @@ export default function GeneratePage() {
     } catch (error) {
       console.error("Download error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to download audio");
+    }
+  };
+
+  const handleDeleteArticle = async () => {
+    if (deletingArticle) return;
+
+    setDeletingArticle(true);
+
+    try {
+      const response = await fetch(`/api/article/${articleId}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to delete article");
+      }
+
+      toast.success("Article deleted");
+      router.push("/");
+    } catch (error) {
+      console.error("Delete article error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete article");
+    } finally {
+      setDeletingArticle(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -637,6 +686,17 @@ export default function GeneratePage() {
                   <span className={progress >= 100 ? "text-[#e50914]" : ""}>Ready</span>
                 </div>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deletingArticle}
+                className="w-full border-red-500/30 bg-red-500/10 text-red-200 hover:border-red-500/50 hover:bg-red-500/20 hover:text-red-100 sm:w-auto"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {deletingArticle ? "Deleting..." : "Delete article"}
+              </Button>
             </div>
 
             <div className="status-panel rounded-2xl p-5 sm:p-6">
@@ -914,7 +974,7 @@ export default function GeneratePage() {
               <div>
                 <h3 className="font-display text-4xl leading-none text-white sm:text-5xl">Audio Completed</h3>
                 <p className="mt-2 text-sm text-white/65">
-                  Your generated narration is ready. You can open the player now or save an MP3 copy.
+                  Your generated narration is ready. You can play it in the mini player or save an MP3 copy.
                 </p>
               </div>
             </div>
@@ -925,7 +985,7 @@ export default function GeneratePage() {
                 className="h-14 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white"
               >
                 <Play className="mr-2 h-5 w-5" fill="white" />
-                Play Audio
+                Play in Mini Player
               </Button>
               <Button
                 onClick={handleDownload}
@@ -967,6 +1027,22 @@ export default function GeneratePage() {
           </section>
         )}
       </main>
+
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          if (!deletingArticle) {
+            setShowDeleteDialog(false);
+          }
+        }}
+        onConfirm={handleDeleteArticle}
+        title="Delete Article"
+        message="This will permanently delete this article and any generated audio files. This action cannot be undone."
+        confirmText="Delete Article"
+        variant="danger"
+        loading={deletingArticle}
+      />
+
       <style jsx>{`
         .hero-panel {
           border: 1px solid rgba(255, 255, 255, 0.1);

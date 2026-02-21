@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/player/:audioId",
+        destination: "/library?playAudioId=:audioId",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

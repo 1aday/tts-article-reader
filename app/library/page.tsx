@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileText, Plus, Play, Download, Music, Loader2, Trash2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -41,9 +41,11 @@ interface Article {
 
 export default function LibraryPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentTrack, isStickyPlayerVisible, play, pause } = usePlayer();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasHandledQueryAutoplayRef = useRef(false);
 
   // Filter state
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
@@ -94,7 +96,7 @@ export default function LibraryPage() {
     }
   };
 
-  const handlePlayAudio = (audio: AudioFile, article: Article) => {
+  const handlePlayAudio = useCallback((audio: AudioFile, article: Article) => {
     play({
       id: audio.id,
       articleId: article.id,
@@ -106,8 +108,68 @@ export default function LibraryPage() {
       blobUrl: audio.blobUrl,
       duration: audio.duration || 0,
     });
-    router.push(`/player/${audio.id}`);
-  };
+  }, [play]);
+
+  useEffect(() => {
+    if (loading || hasHandledQueryAutoplayRef.current) return;
+
+    const playAudioIdParam = searchParams.get("playAudioId");
+    if (!playAudioIdParam) return;
+
+    hasHandledQueryAutoplayRef.current = true;
+
+    const playAudioId = Number(playAudioIdParam);
+    if (!Number.isFinite(playAudioId) || playAudioId <= 0) {
+      router.replace("/library");
+      return;
+    }
+
+    const matchingArticle = articles.find((article) =>
+      article.audioFiles.some((audio) => audio.id === playAudioId)
+    );
+    const matchingAudio = matchingArticle?.audioFiles.find((audio) => audio.id === playAudioId);
+
+    if (matchingArticle && matchingAudio) {
+      handlePlayAudio(matchingAudio, matchingArticle);
+      router.replace("/library");
+      return;
+    }
+
+    const playFromApi = async () => {
+      try {
+        const audioResponse = await fetch(`/api/audio/${playAudioId}`);
+        if (!audioResponse.ok) {
+          throw new Error("Failed to load requested audio");
+        }
+
+        const audio = await audioResponse.json();
+        const articleResponse = await fetch(`/api/article/${audio.articleId}`);
+        const article = articleResponse.ok ? await articleResponse.json() : null;
+
+        play({
+          id: audio.id,
+          articleId: audio.articleId,
+          articleTitle:
+            typeof article?.title === "string" && article.title.trim().length > 0
+              ? article.title.trim()
+              : `Article ${audio.articleId}`,
+          articleImageUrl: hasPersistentGeneratedImage(article?.generatedImageUrl)
+            ? article.generatedImageUrl
+            : article?.imageUrl ?? null,
+          voiceName: audio.voiceName || "Voice narration",
+          blobUrl: audio.blobUrl,
+          duration: audio.duration || 0,
+        });
+      } catch (error) {
+        console.error("Failed to start playback from playAudioId query:", error);
+        toast.error("Unable to load that audio track.");
+      } finally {
+        router.replace("/library");
+      }
+    };
+
+    void playFromApi();
+  }, [articles, handlePlayAudio, loading, play, router, searchParams]);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -210,6 +272,15 @@ export default function LibraryPage() {
   const handleGenerateImage = async (e: React.MouseEvent, articleId: number) => {
     e.stopPropagation(); // Prevent card click
     setGeneratingImageId(articleId);
+    setArticles((prev) =>
+      prev.map((article) =>
+        article.id === articleId
+          ? { ...article, imageGenerationStatus: "generating" }
+          : article
+      )
+    );
+    const toastId = `generate-image-${articleId}`;
+    toast.loading("Generating cover image...", { id: toastId });
 
     try {
       const response = await fetch("/api/article/generate-image", {
@@ -239,10 +310,17 @@ export default function LibraryPage() {
         )
       );
 
-      toast.success("Image generated successfully!");
+      toast.success("Image generated successfully!", { id: toastId });
     } catch (error) {
       console.error("Generate image error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to generate image");
+      setArticles((prev) =>
+        prev.map((article) =>
+          article.id === articleId
+            ? { ...article, imageGenerationStatus: "failed" }
+            : article
+        )
+      );
+      toast.error(error instanceof Error ? error.message : "Failed to generate image", { id: toastId });
     } finally {
       setGeneratingImageId(null);
     }
@@ -498,13 +576,13 @@ export default function LibraryPage() {
             )}
 
             {/* Grid view with Netflix-style cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
               {filteredArticles.map((article, index) => (
                 <div
                   key={article.id}
                   className={`group relative overflow-hidden rounded-2xl bg-surface-1/90 border border-white/10 hover:border-[#e50914]/35 hover:shadow-[0_18px_45px_rgba(0,0,0,0.42)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer animate-fadeInUp stagger-${index % 6 + 1}`}
                   onClick={() => {
-                    // Click card to open full player when audio exists
+                    // Click card to start sticky playback when audio exists
                     if (article.audioFiles.length > 0) {
                       handlePlayAudio(article.audioFiles[0], article);
                     } else {
@@ -513,7 +591,7 @@ export default function LibraryPage() {
                   }}
                 >
                   {/* Featured Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#e50914]/25 to-[#b20710]/25">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-[#e50914]/25 to-[#b20710]/25">
                     {(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) ? (
                       <img
                         src={(hasPersistentGeneratedImage(article.generatedImageUrl) ? article.generatedImageUrl : article.imageUrl) || ''}
@@ -565,6 +643,8 @@ export default function LibraryPage() {
                         disabled={generatingImageId === article.id || article.imageGenerationStatus === "generating"}
                         className={`w-8 h-8 text-white rounded-full flex items-center justify-center transition-all duration-200 ${
                           !hasPersistentGeneratedImage(article.generatedImageUrl)
+                          || generatingImageId === article.id
+                          || article.imageGenerationStatus === "generating"
                             ? "bg-[#e50914]/90 hover:bg-[#e50914] opacity-100"
                             : "bg-[#e50914]/90 hover:bg-[#e50914] opacity-0 group-hover:opacity-100"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -618,7 +698,7 @@ export default function LibraryPage() {
                             className="flex-1 bg-gradient-to-r from-[#e50914] to-[#b20710] text-white hover:opacity-90 font-semibold"
                           >
                             <Play className="w-3.5 h-3.5 mr-1.5" fill="white" />
-                            Open Player
+                            Play Audio
                           </Button>
                           <Button
                             onClick={() => handleDownload(article.audioFiles[0].id)}
@@ -642,15 +722,6 @@ export default function LibraryPage() {
                       )}
                     </div>
 
-                    {article.audioFiles.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/player/${article.audioFiles[0].id}`)}
-                        className="block w-full text-left text-[11px] text-white/45 hover:text-white/80 transition-colors"
-                      >
-                        {`Player URL: /player/${article.audioFiles[0].id}`}
-                      </button>
-                    )}
                   </div>
                 </div>
               ))}

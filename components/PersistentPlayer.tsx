@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -153,7 +152,7 @@ export function PersistentPlayer() {
         </div>
 
         <div className="relative mx-auto grid w-full max-w-[1700px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-4">
-          <Link href={`/player/${currentTrack.id}`} className="group flex min-w-0 items-center gap-2.5">
+          <div className="group flex min-w-0 items-center gap-2.5">
             <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border border-white/15 bg-surface-2 sm:h-11 sm:w-11">
               {currentTrack.articleImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -174,7 +173,7 @@ export function PersistentPlayer() {
               </p>
               <p className="truncate text-[11px] text-white/45">{currentTrack.voiceName}</p>
             </div>
-          </Link>
+          </div>
 
           <button
             onClick={closeStickyPlayer}
