@@ -56,6 +56,7 @@ export const buildArticleOgImagePath = (
 
 const buildImageMetadata = (path: string, alt: string) => ({
   url: path,
+  secureUrl: path,
   width: OG_IMAGE_WIDTH,
   height: OG_IMAGE_HEIGHT,
   type: "image/jpeg",
@@ -84,7 +85,7 @@ export const buildRootMetadata = (): Metadata => ({
     card: "summary_large_image",
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [HOME_OG_PATH],
+    images: [buildImageMetadata(HOME_OG_PATH, `${SITE_NAME} home preview`)],
   },
 });
 
@@ -118,6 +119,6 @@ export const buildPageMetadata = ({
     card: "summary_large_image",
     title,
     description,
-    images: [ogImagePath],
+    images: [buildImageMetadata(ogImagePath, `${title} preview`)],
   },
 });
