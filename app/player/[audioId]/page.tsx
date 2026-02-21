@@ -62,15 +62,7 @@ const getPreferredDuration = (metadataDuration: number, fallbackDuration: number
   const safeMetadata = Number.isFinite(metadataDuration) && metadataDuration > 0 ? metadataDuration : 0;
   const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0;
 
-  if (safeMetadata <= 0) return safeFallback;
-  if (safeFallback <= 0) return safeMetadata;
-
-  const ratio = safeMetadata / safeFallback;
-  if (ratio < 0.75 || ratio > 1.25) {
-    return safeFallback;
-  }
-
-  return safeMetadata;
+  return safeMetadata > 0 ? safeMetadata : safeFallback;
 };
 const getSeekableEnd = (audio: HTMLAudioElement) => {
   if (!audio.seekable || audio.seekable.length === 0) return 0;
@@ -80,14 +72,12 @@ const getSeekableEnd = (audio: HTMLAudioElement) => {
 const resolveDuration = (
   audio: HTMLAudioElement,
   fallbackDuration: number,
-  currentDuration = 0,
   currentTime = audio.currentTime,
 ) => {
   const preferred = getPreferredDuration(audio.duration, fallbackDuration);
   const seekableEnd = getSeekableEnd(audio);
-  const safeCurrentDuration = Number.isFinite(currentDuration) && currentDuration > 0 ? currentDuration : 0;
   const safeCurrentTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : 0;
-  return Math.max(preferred, seekableEnd, safeCurrentDuration, safeCurrentTime);
+  return Math.max(preferred, seekableEnd, safeCurrentTime);
 };
 
 const persistListeningProgress = (id: number, time: number) => {
@@ -366,7 +356,7 @@ export default function PlayerPage() {
       const audio = audioRef.current;
       if (!audio) return;
       const seekOffset = details.seekOffset ?? 10;
-      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0);
       const upperBound = Math.max(safeDuration, audio.currentTime);
       const nextTime = clamp(audio.currentTime - seekOffset, 0, upperBound);
       audio.currentTime = nextTime;
@@ -377,7 +367,7 @@ export default function PlayerPage() {
       const audio = audioRef.current;
       if (!audio) return;
       const seekOffset = details.seekOffset ?? 10;
-      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0);
       const upperBound = Math.max(safeDuration, audio.currentTime + seekOffset);
       const nextTime = clamp(audio.currentTime + seekOffset, 0, upperBound);
       audio.currentTime = nextTime;
@@ -387,7 +377,7 @@ export default function PlayerPage() {
     setActionHandler("seekto", (details) => {
       const audio = audioRef.current;
       if (!audio || typeof details.seekTime !== "number") return;
-      const safeDuration = resolveDuration(audio, audioData?.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, audioData?.duration || 0);
       const upperBound = Math.max(safeDuration, details.seekTime);
       const nextTime = clamp(details.seekTime, 0, upperBound);
       if (typeof audio.fastSeek === "function" && details.fastSeek) {
@@ -476,7 +466,7 @@ export default function PlayerPage() {
       if (event.key === "ArrowLeft" || event.key.toLowerCase() === "j") {
         event.preventDefault();
         if (!audioRef.current) return;
-        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0);
         const upperBound = Math.max(safeDuration, audioRef.current.currentTime);
         const next = clamp(audioRef.current.currentTime - 10, 0, upperBound);
         audioRef.current.currentTime = next;
@@ -487,7 +477,7 @@ export default function PlayerPage() {
       if (event.key === "ArrowRight" || event.key.toLowerCase() === "l") {
         event.preventDefault();
         if (!audioRef.current) return;
-        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+        const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0);
         const upperBound = Math.max(safeDuration, audioRef.current.currentTime + 10);
         const next = clamp(audioRef.current.currentTime + 10, 0, upperBound);
         audioRef.current.currentTime = next;
@@ -748,10 +738,9 @@ export default function PlayerPage() {
       const nextDuration = resolveDuration(
         audioRef.current,
         audioData?.duration || 0,
-        duration,
         nextTime,
       );
-      if (nextDuration > 0 && nextDuration - duration > 0.25) {
+      if (nextDuration > 0 && Math.abs(nextDuration - duration) > 0.25) {
         setDuration(nextDuration);
       }
 
@@ -765,7 +754,7 @@ export default function PlayerPage() {
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
+      const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0);
       setDuration(safeDuration);
       const resumeUpperBound = safeDuration > 0 ? safeDuration : (audioData?.duration || 0);
 
@@ -809,8 +798,8 @@ export default function PlayerPage() {
   };
   const handleDurationChange = () => {
     if (!audioRef.current) return;
-    const nextDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration);
-    if (nextDuration > 0 && nextDuration - duration > 0.25) {
+    const nextDuration = resolveDuration(audioRef.current, audioData?.duration || 0);
+    if (nextDuration > 0 && Math.abs(nextDuration - duration) > 0.25) {
       setDuration(nextDuration);
     }
   };
@@ -828,7 +817,7 @@ export default function PlayerPage() {
 
   const seekTo = (time: number) => {
     if (!audioRef.current) return;
-    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration, time);
+    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, time);
     const nextTime = clamp(time, 0, Math.max(safeDuration, time));
     audioRef.current.currentTime = nextTime;
     setCurrentTime(nextTime);
@@ -868,7 +857,7 @@ export default function PlayerPage() {
   const skip = (seconds: number) => {
     if (!audioRef.current) return;
     const current = audioRef.current.currentTime;
-    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, duration, current);
+    const safeDuration = resolveDuration(audioRef.current, audioData?.duration || 0, current);
     const upperBound = Number.isFinite(safeDuration) && safeDuration > 0
       ? Math.max(safeDuration, current + Math.max(seconds, 0))
       : current + Math.max(seconds, 0);

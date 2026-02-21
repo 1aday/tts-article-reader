@@ -15,7 +15,7 @@ import { rateLimits, getClientIp, formatRateLimitError } from "@/lib/rate-limit"
 import { getVoiceName, isDisplayVoiceName } from "@/lib/voice-names";
 import { DEFAULT_VOICE_AUDIO_SETTINGS } from "@/lib/audio-settings";
 import { estimateMp3DurationSeconds } from "@/lib/audio-duration";
-import { mergeMp3Chunks } from "@/lib/mp3-utils";
+import { getMp3DurationSeconds, mergeMp3Chunks } from "@/lib/mp3-utils";
 
 export const maxDuration = 300;
 
@@ -584,7 +584,10 @@ export async function POST(request: NextRequest) {
             ? await remuxMp3Buffer(mergedAudioBuffer)
             : null;
           const finalAudioBuffer = remuxedAudioBuffer ?? mergedAudioBuffer;
-          const estimatedDurationSeconds = estimateMp3DurationSeconds(finalAudioBuffer.length);
+          const measuredDurationSeconds = getMp3DurationSeconds(finalAudioBuffer);
+          const resolvedDurationSeconds = measuredDurationSeconds > 0
+            ? measuredDurationSeconds
+            : estimateMp3DurationSeconds(finalAudioBuffer.length);
           const fileSizeMB = (finalAudioBuffer.length / (1024 * 1024)).toFixed(2);
 
           emitEvent({
@@ -621,7 +624,7 @@ export async function POST(request: NextRequest) {
               voiceId,
               voiceName: resolvedVoiceName,
               blobUrl,
-              duration: estimatedDurationSeconds,
+              duration: resolvedDurationSeconds,
               fileSize: finalAudioBuffer.length,
               status: "completed",
             })

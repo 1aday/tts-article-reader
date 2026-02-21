@@ -45,15 +45,7 @@ const getPreferredDuration = (metadataDuration: number, fallbackDuration: number
   const safeMetadata = Number.isFinite(metadataDuration) && metadataDuration > 0 ? metadataDuration : 0;
   const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0;
 
-  if (safeMetadata <= 0) return safeFallback;
-  if (safeFallback <= 0) return safeMetadata;
-
-  const ratio = safeMetadata / safeFallback;
-  if (ratio < 0.75 || ratio > 1.25) {
-    return safeFallback;
-  }
-
-  return safeMetadata;
+  return safeMetadata > 0 ? safeMetadata : safeFallback;
 };
 const getSeekableEnd = (audio: HTMLAudioElement) => {
   if (!audio.seekable || audio.seekable.length === 0) return 0;
@@ -63,14 +55,12 @@ const getSeekableEnd = (audio: HTMLAudioElement) => {
 const resolveDuration = (
   audio: HTMLAudioElement,
   fallbackDuration: number,
-  currentDuration = 0,
   currentTime = audio.currentTime,
 ) => {
   const preferred = getPreferredDuration(audio.duration, fallbackDuration);
   const seekableEnd = getSeekableEnd(audio);
-  const safeCurrentDuration = Number.isFinite(currentDuration) && currentDuration > 0 ? currentDuration : 0;
   const safeCurrentTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : 0;
-  return Math.max(preferred, seekableEnd, safeCurrentDuration, safeCurrentTime);
+  return Math.max(preferred, seekableEnd, safeCurrentTime);
 };
 
 const getInitialVolume = () => {
@@ -193,10 +183,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const nextDuration = resolveDuration(
         audio,
         currentTrackRef.current?.duration || 0,
-        durationRef.current,
         nextTime,
       );
-      if (nextDuration > 0 && nextDuration - durationRef.current > 0.25) {
+      if (nextDuration > 0 && Math.abs(nextDuration - durationRef.current) > 0.25) {
         durationRef.current = nextDuration;
         setDuration(nextDuration);
       }
@@ -213,7 +202,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const handleLoadedMetadata = () => {
       const track = currentTrackRef.current;
-      const safeDuration = resolveDuration(audio, track?.duration || 0, durationRef.current);
+      const safeDuration = resolveDuration(audio, track?.duration || 0);
 
       durationRef.current = safeDuration;
       setDuration(safeDuration);
@@ -236,9 +225,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const nextDuration = resolveDuration(
         audio,
         currentTrackRef.current?.duration || 0,
-        durationRef.current,
       );
-      if (nextDuration > 0 && nextDuration - durationRef.current > 0.25) {
+      if (nextDuration > 0 && Math.abs(nextDuration - durationRef.current) > 0.25) {
         durationRef.current = nextDuration;
         setDuration(nextDuration);
       }
@@ -406,7 +394,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const audio = audioRef.current;
       if (!audio) return;
       const seekOffset = details.seekOffset ?? 10;
-      const safeDuration = resolveDuration(audio, currentTrack.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, currentTrack.duration || 0);
       const upperBound = Math.max(safeDuration, audio.currentTime);
       const nextTime = clamp(audio.currentTime - seekOffset, 0, upperBound);
       audio.currentTime = nextTime;
@@ -415,7 +403,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setActionHandler("seekforward", (details) => {
       const audio = audioRef.current;
       if (!audio) return;
-      const safeDuration = resolveDuration(audio, currentTrack.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, currentTrack.duration || 0);
       const seekOffset = details.seekOffset ?? 10;
       const upperBound = Math.max(safeDuration, audio.currentTime + seekOffset);
       const nextTime = clamp(audio.currentTime + seekOffset, 0, upperBound);
@@ -425,7 +413,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setActionHandler("seekto", (details) => {
       const audio = audioRef.current;
       if (!audio || typeof details.seekTime !== "number") return;
-      const safeDuration = resolveDuration(audio, currentTrack.duration || 0, duration);
+      const safeDuration = resolveDuration(audio, currentTrack.duration || 0);
       const upperBound = Math.max(safeDuration, details.seekTime);
       const nextTime = clamp(details.seekTime, 0, upperBound);
       if (typeof audio.fastSeek === "function" && details.fastSeek) {
@@ -510,7 +498,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const seek = (time: number) => {
     if (audioRef.current) {
       const fallbackDuration = currentTrackRef.current?.duration || 0;
-      const safeDuration = resolveDuration(audioRef.current, fallbackDuration, duration, time);
+      const safeDuration = resolveDuration(audioRef.current, fallbackDuration, time);
       const upperBound = safeDuration > 0 ? Math.max(safeDuration, time) : time;
       const nextTime = clamp(time, 0, upperBound);
       audioRef.current.currentTime = nextTime;

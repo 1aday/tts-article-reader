@@ -18,6 +18,8 @@ const SAMPLE_RATES_MPEG25 = [11025, 12000, 8000, 0];
 interface Mp3FrameHeader {
   frameLength: number;
   sideInfoLength: number;
+  sampleRate: number;
+  samplesPerFrame: number;
 }
 
 function isValidSynchsafeByte(value: number): boolean {
@@ -113,6 +115,8 @@ function parseFrameHeader(buffer: Buffer, offset: number): Mp3FrameHeader | null
   return {
     frameLength,
     sideInfoLength,
+    sampleRate,
+    samplesPerFrame: isMpeg1 ? 1152 : 576,
   };
 }
 
@@ -164,4 +168,41 @@ export function mergeMp3Chunks(chunks: Buffer[]): Buffer {
     .filter((chunk) => chunk.length > 0);
 
   return Buffer.concat(normalizedChunks);
+}
+
+export function getMp3DurationSeconds(buffer: Buffer): number {
+  if (buffer.length === 0) {
+    return 0;
+  }
+
+  let normalized = stripLeadingId3Tags(buffer);
+  normalized = stripTrailingId3v1Tag(normalized);
+
+  if (normalized.length < 4) {
+    return 0;
+  }
+
+  let offset = 0;
+  let durationSeconds = 0;
+  let hasSynced = false;
+
+  while (offset + 4 <= normalized.length) {
+    const header = parseFrameHeader(normalized, offset);
+
+    if (!header) {
+      if (hasSynced) {
+        break;
+      }
+      offset += 1;
+      continue;
+    }
+
+    hasSynced = true;
+    durationSeconds += header.samplesPerFrame / header.sampleRate;
+    offset += header.frameLength;
+  }
+
+  return hasSynced && Number.isFinite(durationSeconds) && durationSeconds > 0
+    ? durationSeconds
+    : 0;
 }
